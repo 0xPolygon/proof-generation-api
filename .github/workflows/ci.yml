@@ -1,0 +1,22 @@
+
+name: CI
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '12'
+    - name: Npm packages
+      run: npm install
+    - name: Check lint
+      run: npm run lint
