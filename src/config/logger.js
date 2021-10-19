@@ -1,3 +1,5 @@
+// winston logger for logging errors and info level logs into error.log and combined.log
+
 import { createLogger, format, transports } from 'winston'
 
 const logFormat = format.combine(
@@ -5,7 +7,7 @@ const logFormat = format.combine(
     all: true
   }),
   format.label({
-    label: '[NETWORK-API]'
+    label: '[PROOF-GEN-API]'
   }),
   format.timestamp({
     format: 'YY-MM-DD HH:mm:ss'

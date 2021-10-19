@@ -16,6 +16,10 @@
   "pre-commit": [
     "lint"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maticnetwork/proof-generation-api.git"
+  },
   "author": "Rahul Prabhu <rahul.prabhu@polygon.technology>",
   "license": "ISC",
   "dependencies": {

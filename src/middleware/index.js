@@ -4,7 +4,7 @@ import helmet from 'helmet'
 
 import { json } from 'express'
 
-import config from '../../config/globals'
+import config from '../config/globals'
 
 /**
  * Init Express middleware
@@ -24,3 +24,6 @@ export function registerMiddleware(router) {
   router.use(json())
   router.use(compression())
 }
+
+export { default as validateParams } from './validateParams'
+export { verifyMerkleProof } from './validateResults'
