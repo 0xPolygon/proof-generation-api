@@ -1,18 +1,18 @@
-# network-api
+# proof-genration-api
 
-This repository contains Network API to fetch data to support Matic SDK. The Network API primarily helps the Matic SDK by executing a few heavy processes
-on a dedicated backend server. Proof generation and block inclusion check are some of the endpoints on this network API. The logic behind these API's involves making several RPC calls to the Polygon chain in order to generate the proof or check block checkpoint inclusion
+This repository contains Proof Generation API to fetch data to support Matic SDK. The Proof Generation API primarily helps the Matic SDK by executing a few heavy processes
+on a dedicated backend server. Proof generation and block inclusion check are some of the endpoints on this Proof Generation API. The logic behind these API's involves making several RPC calls to the Polygon chain in order to generate the proof or check block checkpoint inclusion
 
 ## Installation
 
 ```bash
-$ git clone https://github.com/maticnetwork/network-api
-$ cd network-api
+$ git clone https://github.com/maticnetwork/proof-generation-api
+$ cd proof-generation-api
 $ npm install
 
 ```
 
-Create a 'config.yml' file in the network api directory. Refer to 'config.yml.sample' for the example data that needs to be added to 'config.yml'. You can add any number fallback RPCs for polygon mainnet and etheruem to facilitate RPC rotation in case of an error. If you add any other config variables, please make sure you make the necessary changes to "src/config/globals.js".
+Create a 'config.yml' file in the Proof Generation Api directory. Refer to 'config.yml.sample' for the example data that needs to be added to 'config.yml'. You can add any number fallback RPCs for polygon mainnet and etheruem to facilitate RPC rotation in case of an error. If you add any other config variables, please make sure you make the necessary changes to "src/config/globals.js".
 
 
 For development

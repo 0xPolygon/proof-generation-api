@@ -1,9 +1,9 @@
 apps:
   - script: src/index.js
-    name: network-api
+    name: proof-generation-api
     max_restarts: 5
-    error_file: logs/network-api.stderr.log
-    out_file: logs/network-api.stdout.log
-    pid_file: pids/network-api.pid
+    error_file: logs/proof-generation-api.stderr.log
+    out_file: logs/proof-generation-api.stdout.log
+    pid_file: pids/proof-generation-api.pid
     env:
       NODE_ENV: production

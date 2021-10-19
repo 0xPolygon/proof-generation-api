@@ -1,3 +1,5 @@
+// global variables defined in config.yml
+
 import configYaml from 'config-yaml'
 import path from 'path'
 
@@ -13,7 +15,7 @@ const config = configYaml(configFile)
 const debug = config.debug !== 'production'
 export default {
   app: {
-    name: config.app.name || 'Network API',
+    name: config.app.name || 'Proof Generation API',
     port: parseInt(config.app.port || 5000, 10),
     maticRPC: config.app.maticRPCs,
     ethereumRPC: config.app.ethereumRPCs,
@@ -21,5 +23,7 @@ export default {
     mumbaiRPC: config.app.mumbaiRPC
   },
   debug: debug,
-  networks: config.networks
+  networks: config.networks,
+  mainnetRpcIndex: 0,
+  testnetRpcIndex: 0
 }

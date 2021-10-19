@@ -5,7 +5,7 @@ const expect = chai.expect
 const baseUrl = 'localhost:5000'
 
 chai.use(chaiHttp)
-describe('Network API Tests', () => {
+describe('Proof Generation API Tests', () => {
   // test to check if endpoint it live
   it('server is live', function(done) {
     chai.request(baseUrl)
