@@ -3,7 +3,7 @@
 app:
   port: 5000
   nodeEnv: // production or dev
-  name: Network APIs
+  name: Proof Generation API
   maticRPCs: 
     - https url for matic rpc1
     - https url for mativ rpc2
