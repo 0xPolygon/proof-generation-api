@@ -1,4 +1,4 @@
-# proof-genration-api
+# proof-generation-api
 
 This repository contains Proof Generation API to fetch data to support Matic SDK. The Proof Generation API primarily helps the Matic SDK by executing a few heavy processes
 on a dedicated backend server. Proof generation and block inclusion check are some of the endpoints on this Proof Generation API. The logic behind these API's involves making several RPC calls to the Polygon chain in order to generate the proof or check block checkpoint inclusion
