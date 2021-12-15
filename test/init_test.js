@@ -2,7 +2,7 @@
 const chai = require('chai')
 const chaiHttp = require('chai-http')
 const expect = chai.expect
-const baseUrl = 'localhost:5000'
+const baseUrl = 'localhost:3000'
 
 chai.use(chaiHttp)
 describe('Proof Generation API Tests', () => {
@@ -121,7 +121,7 @@ describe('Proof Generation API Tests', () => {
   //
   it('exit payload test', (done) => {
     chai.request(baseUrl)
-      .get('/api/v1/matic/exit-payload/0x272ce652e562677a0db65f95d0c0dc1dd11ef6b2099f09acdaf9b831b51f6804?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef')
+      .get('/api/v1/matic/exit-payload/0x1a7b6aba7e51344474d4fe722a3969e8c7a863c72329210a0dda80d26c4234b4?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef')
       .end(function(err, res) {
         if (err) {
           console.log(err)
@@ -154,6 +154,19 @@ describe('Proof Generation API Tests', () => {
         }
         expect(res).to.have.status(400)
         expect(res.body.error).to.be.true
+        done()
+      })
+  })
+
+  it('erc1155 exit payload arguments test - 2', (done) => {
+    chai.request(baseUrl)
+      .get('/api/v1/matic/exit-payload/0x4d4a9ee49a681a97ade92788f2fdce1d1761978ab491c2a10eb6849101cd63fe?eventSignature=0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb')
+      .end(function(err, res) {
+        if (err) {
+          console.log(err)
+        }
+        expect(res).to.have.status(200)
+        // expect(res.body.result).to.be.true
         done()
       })
   })
