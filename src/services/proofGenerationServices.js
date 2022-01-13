@@ -69,10 +69,12 @@ export async function isBlockIncluded(blockNumber, isMainnet) {
       }
       break
     } catch (error) {
-      if (error.type === errorTypes.BlockNotIncluded) {
+      if (i === maxRetries - 1) {
+        logger.error(`error in generateExitPayload function\nrpcIndex = ${rpcIndex}\n`, error)
+        throw error
+      } else if (error.type === errorTypes.BlockNotIncluded) {
         throw error
       }
-      logger.error(`error in isBlockIncluded function\nrpcIndex = ${rpcIndex}\n`, error)
     }
   }
   return result
@@ -121,7 +123,10 @@ export async function fastMerkleProof(start, end, number, isMainnet) {
       }
       break
     } catch (error) {
-      logger.error(`error in fastMerkleProof function\nrpcIndex = ${rpcIndex}\n`, error)
+      if (i === maxRetries - 1) {
+        logger.error(`error in fastMerkleProof function\nrpcIndex = ${rpcIndex}\n`, error)
+        throw error
+      }
     }
   }
   return { proof }
@@ -192,12 +197,14 @@ export async function generateExitPayload(burnTxHash, eventSignature, isMainnet)
       }
       break
     } catch (error) {
-      if (error.type === errorTypes.TxNotCheckpointed ||
+      if (i === maxRetries - 1) {
+        logger.error(`error in generateExitPayload function\nrpcIndex = ${rpcIndex}\n`, error)
+        throw error
+      } else if (error.type === errorTypes.TxNotCheckpointed ||
         error.type === errorTypes.IncorrectTx ||
         error.type === errorTypes.BlockNotIncluded) {
         throw error
       }
-      logger.error(`error in generateExitPayload function\nrpcIndex = ${rpcIndex}\n`, error)
     }
   }
   return { message: 'Payload generation success', result }
