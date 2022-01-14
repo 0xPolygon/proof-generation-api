@@ -1,7 +1,6 @@
-import logger from '../config/logger'
 import config from '../config/globals'
 import errorTypes from '../config/errorTypes'
-import initMatic from '../helpers/maticClient'
+import { initMatic, convert } from '../helpers/maticClient'
 import { InfoError } from '../helpers/errorHelper'
 
 const mainnetRPCLength = config.app.maticRPC.length // total mainnet rpcs
@@ -23,7 +22,6 @@ export async function isBlockIncluded(blockNumber, isMainnet) {
   const rpcLength = isMainnet ? mainnetRPCLength : testnetRPCLength
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex
 
-  var matic
   var result
 
   // loop over rpcs to retry in case of an rpc error
@@ -31,21 +29,22 @@ export async function isBlockIncluded(blockNumber, isMainnet) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength
     try {
       // initialize matic client
-      await initMatic(isMainnet, maticRPC[rpcIndex], ethereumRPC[rpcIndex]).then((obj) => {
-        matic = obj.matic
-      })
+      const maticClient = await initMatic(isMainnet, maticRPC[rpcIndex], ethereumRPC[rpcIndex])
 
       // check last child block included
-      const lastChildBlock = await matic.rootChain.getLastChildBlock()
+      const lastChildBlock = await maticClient.exitUtil.rootChain.getLastChildBlock()
       if (parseInt(lastChildBlock) >= parseInt(blockNumber)) {
         // fetch header block information
-        let headerBlockNumber = await matic.rootChain.findHeaderBlockNumber(
-          blockNumber
-        )
-        headerBlockNumber = matic.encode(headerBlockNumber)
-        const headerBlock = await matic.web3Client.call(
-          matic.rootChain.rootChain.methods.headerBlocks(headerBlockNumber)
-        )
+        const headerBlockNumber = await maticClient.exitUtil.rootChain.findRootBlockFromChild(blockNumber).then((result) => {
+          return convert(result)
+        })
+
+        const headerBlock = await maticClient.exitUtil.rootChain.method(
+          'headerBlocks',
+          headerBlockNumber
+        ).then(method => {
+          return method.read()
+        })
 
         result = {
           headerBlockNumber,
@@ -69,10 +68,7 @@ export async function isBlockIncluded(blockNumber, isMainnet) {
       }
       break
     } catch (error) {
-      if (i === maxRetries - 1) {
-        logger.error(`error in generateExitPayload function\nrpcIndex = ${rpcIndex}\n`, error)
-        throw error
-      } else if (error.type === errorTypes.BlockNotIncluded) {
+      if (error.type === errorTypes.BlockNotIncluded || i === maxRetries - 1) {
         throw error
       }
     }
@@ -96,7 +92,6 @@ export async function fastMerkleProof(start, end, number, isMainnet) {
   const rpcLength = isMainnet ? mainnetRPCLength : testnetRPCLength
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex
 
-  var maticPoS
   var proof
 
   // loop over rpcs to retry in case of an rpc error
@@ -104,16 +99,10 @@ export async function fastMerkleProof(start, end, number, isMainnet) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength
     try {
       // initialize matic client
-      await initMatic(isMainnet, maticRPC[rpcIndex], ethereumRPC[rpcIndex]).then((obj) => {
-        maticPoS = obj.maticPoS
-      })
+      const maticClient = await initMatic(isMainnet, maticRPC[rpcIndex], ethereumRPC[rpcIndex])
 
       // get merkle proof
-      proof = await maticPoS.posRootChainManager.exitFastMerkle(
-        start,
-        end,
-        number
-      )
+      proof = await maticClient.exitUtil.getBlockProof(number, { start, end })
 
       // if rpc has been changed, update the global current rpc index
       if (rpcIndex !== initialRpcIndex) {
@@ -124,7 +113,6 @@ export async function fastMerkleProof(start, end, number, isMainnet) {
       break
     } catch (error) {
       if (i === maxRetries - 1) {
-        logger.error(`error in fastMerkleProof function\nrpcIndex = ${rpcIndex}\n`, error)
         throw error
       }
     }
@@ -147,8 +135,6 @@ export async function generateExitPayload(burnTxHash, eventSignature, isMainnet)
   const rpcLength = isMainnet ? mainnetRPCLength : testnetRPCLength
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex
 
-  var matic
-  var maticPoS
   var result
 
   // loop over rpcs to retry in case of an in case of an rpc error
@@ -156,37 +142,32 @@ export async function generateExitPayload(burnTxHash, eventSignature, isMainnet)
     const rpcIndex = (initialRpcIndex + i) % rpcLength
     try {
       // initialize matic client
-      await initMatic(isMainnet, maticRPC[rpcIndex], ethereumRPC[rpcIndex]).then((obj) => {
-        matic = obj.matic
-        maticPoS = obj.maticPoS
-      })
+      const maticClient = await initMatic(isMainnet, maticRPC[rpcIndex], ethereumRPC[rpcIndex])
 
       // fetch last child block included
-      const lastChildBlock = await matic.rootChain.getLastChildBlock()
+      const lastChildBlock = await maticClient.exitUtil.rootChain.getLastChildBlock()
 
       // fetch transaction receipt
-      const receipt = await matic.web3Client.getMaticWeb3().eth.getTransactionReceipt(burnTxHash)
-
-      if (!receipt || !receipt.blockNumber) {
-      // temporary fix for when we receive null receipts
-      // should be reverted back when issue is fixed
+      try {
+        const receipt = await maticClient.client.child.getTransactionReceipt(burnTxHash)
+        if (parseInt(lastChildBlock) < parseInt(receipt.blockNumber)) {
+          throw new InfoError(errorTypes.TxNotCheckpointed, 'Burn transaction has not been checkpointed yet')
+        }
+      } catch (error) {
+        // temporary fix for when we receive null receipts
+        // should be reverted back when issue is fixed
 
         if (i === maxRetries - 1) {
           throw new InfoError(errorTypes.IncorrectTx, 'Incorrect burn transaction')
         }
         throw new Error('Null receipt received')
       }
-      if (parseInt(lastChildBlock) < parseInt(receipt.blockNumber)) {
-        throw new InfoError(errorTypes.TxNotCheckpointed, 'Burn transaction has not been checkpointed yet')
-      }
 
       // build payload for exit
-      result = await maticPoS.posRootChainManager.exitManager.buildPayloadForExit(
-        burnTxHash,
-        eventSignature
-      )
-      if (!result) {
-        throw new InfoError(errorTypes.BlockNotIncluded, 'No block found')
+      try {
+        result = await maticClient.exitUtil.buildPayloadForExit(burnTxHash, eventSignature)
+      } catch {
+        throw new InfoError(errorTypes.BlockNotIncluded, 'Event Signature log not found in tx receipt')
       }
 
       // if rpc has been changed, update the global current rpc index
@@ -197,12 +178,10 @@ export async function generateExitPayload(burnTxHash, eventSignature, isMainnet)
       }
       break
     } catch (error) {
-      if (i === maxRetries - 1) {
-        logger.error(`error in generateExitPayload function\nrpcIndex = ${rpcIndex}\n`, error)
-        throw error
-      } else if (error.type === errorTypes.TxNotCheckpointed ||
+      if (error.type === errorTypes.TxNotCheckpointed ||
         error.type === errorTypes.IncorrectTx ||
-        error.type === errorTypes.BlockNotIncluded) {
+        error.type === errorTypes.BlockNotIncluded ||
+        i === maxRetries - 1) {
         throw error
       }
     }

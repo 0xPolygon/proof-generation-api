@@ -1,4 +1,8 @@
-import Matic, { MaticPOSClient } from '@maticnetwork/maticjs'
+import { Converter, POSClient, use } from '@maticnetwork/maticjs'
+import { Web3ClientPlugin } from '@maticnetwork/maticjs-web3'
+
+// install web3 plugin
+use(Web3ClientPlugin)
 
 // get matic and maticPoS clients from maticjs
 async function initMatic(isMainnet, maticRPC, ethereumRPC) {
@@ -8,15 +12,22 @@ async function initMatic(isMainnet, maticRPC, ethereumRPC) {
   const maticConfig = {
     network: _network,
     version: _version,
-    parentProvider: ethereumRPC,
-    maticProvider: maticRPC,
-    parentDefaultOptions: {},
-    maticDefaultOptions: {}
+    parent: {
+      provider: ethereumRPC,
+      defaultConfig: {}
+    },
+    child: {
+      provider: maticRPC,
+      defaultConfig: {}
+    }
   }
-  const maticObj = new Matic(maticConfig)
-  const maticPoSObj = new MaticPOSClient(maticConfig)
-  await maticObj.initialize()
-  return { matic: maticObj, maticPoS: maticPoSObj }
+  const posClient = new POSClient()
+  await posClient.init(maticConfig)
+  return posClient
 }
 
-export default initMatic
+async function convert(value) {
+  return Converter.toHex(value)
+}
+
+export { initMatic, convert }
