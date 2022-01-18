@@ -29,17 +29,19 @@ export async function isBlockIncluded(blockNumber, isMainnet) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength
     try {
       // initialize matic client
-      const maticClient = await initMatic(isMainnet, maticRPC[rpcIndex], ethereumRPC[rpcIndex])
+      const rootChain = await initMatic(isMainnet, maticRPC[rpcIndex], ethereumRPC[rpcIndex]).then((maticClient) => {
+        return maticClient.exitUtil.rootChain
+      })
 
       // check last child block included
-      const lastChildBlock = await maticClient.exitUtil.rootChain.getLastChildBlock()
+      const lastChildBlock = await rootChain.getLastChildBlock()
       if (parseInt(lastChildBlock) >= parseInt(blockNumber)) {
         // fetch header block information
-        const headerBlockNumber = await maticClient.exitUtil.rootChain.findRootBlockFromChild(blockNumber).then((result) => {
+        const headerBlockNumber = await rootChain.findRootBlockFromChild(blockNumber).then((result) => {
           return convert(result)
         })
 
-        const headerBlock = await maticClient.exitUtil.rootChain.method(
+        const headerBlock = await rootChain.method(
           'headerBlocks',
           headerBlockNumber
         ).then(method => {
