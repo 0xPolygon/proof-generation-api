@@ -17,9 +17,9 @@ export default {
       if (error instanceof InfoError) {
         handleError({ res, statusCode: 404, err: error })
       } else {
+        logger.error('error in isBlockIncluded controller\n', error)
         handleError({ res })
       }
-      logger.error('error in isBlockIncluded controller\n', error)
     }
   },
 
@@ -38,9 +38,9 @@ export default {
       if (error instanceof InfoError) {
         handleError({ res, statusCode: 404, err: error })
       } else {
+        logger.error('error in fastMerkleProof controller\n', error)
         handleError({ res })
       }
-      logger.error('error in fastMerkleProof controller\n', error)
     }
   },
 
@@ -55,9 +55,9 @@ export default {
       if (error instanceof InfoError) {
         handleError({ res, statusCode: 404, err: error })
       } else {
+        logger.error('error in exitPayload controller\n', error)
         handleError({ res })
       }
-      logger.error('error in exitPayload controller\n', error)
     }
   }
 }
