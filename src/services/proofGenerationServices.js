@@ -62,12 +62,6 @@ export async function isBlockIncluded(blockNumber, isMainnet) {
         throw new InfoError(errorTypes.BlockNotIncluded, 'No block found')
       }
 
-      // if rpc has been changed, update the global current rpc index
-      if (rpcIndex !== initialRpcIndex) {
-        isMainnet
-          ? config.mainnetRpcIndex = rpcIndex
-          : config.testnetRpcIndex = rpcIndex
-      }
       break
     } catch (error) {
       if (error.type === errorTypes.BlockNotIncluded || i === maxRetries - 1) {
@@ -106,12 +100,6 @@ export async function fastMerkleProof(start, end, number, isMainnet) {
       // get merkle proof
       proof = await maticClient.exitUtil.getBlockProof(number, { start, end })
 
-      // if rpc has been changed, update the global current rpc index
-      if (rpcIndex !== initialRpcIndex) {
-        isMainnet
-          ? config.mainnetRpcIndex = rpcIndex
-          : config.testnetRpcIndex = rpcIndex
-      }
       break
     } catch (error) {
       if (i === maxRetries - 1) {
@@ -138,6 +126,7 @@ export async function generateExitPayload(burnTxHash, eventSignature, isMainnet)
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex
 
   var result
+  var isCheckpointed
 
   // loop over rpcs to retry in case of an in case of an rpc error
   for (var i = 0; i < maxRetries; i++) {
@@ -146,38 +135,33 @@ export async function generateExitPayload(burnTxHash, eventSignature, isMainnet)
       // initialize matic client
       const maticClient = await initMatic(isMainnet, maticRPC[rpcIndex], ethereumRPC[rpcIndex])
 
-      // fetch last child block included
-      const lastChildBlock = await maticClient.exitUtil.rootChain.getLastChildBlock()
-
-      // fetch transaction receipt
+      // check for checkpoint
       try {
-        const receipt = await maticClient.client.child.getTransactionReceipt(burnTxHash)
-        if (parseInt(lastChildBlock) < parseInt(receipt.blockNumber)) {
-          throw new InfoError(errorTypes.TxNotCheckpointed, 'Burn transaction has not been checkpointed yet')
-        }
+        isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash)
       } catch (error) {
-        // temporary fix for when we receive null receipts
-        // should be reverted back when issue is fixed
-
         if (i === maxRetries - 1) {
           throw new InfoError(errorTypes.IncorrectTx, 'Incorrect burn transaction')
         }
         throw new Error('Null receipt received')
       }
+      if (!isCheckpointed) {
+        throw new InfoError(errorTypes.TxNotCheckpointed, 'Burn transaction has not been checkpointed yet')
+      }
 
       // build payload for exit
       try {
         result = await maticClient.exitUtil.buildPayloadForExit(burnTxHash, eventSignature)
-      } catch {
-        throw new InfoError(errorTypes.BlockNotIncluded, 'Event Signature log not found in tx receipt')
+      } catch (error) {
+        if (i === maxRetries - 1) {
+          throw new InfoError(errorTypes.BlockNotIncluded, 'Event Signature log not found in tx receipt')
+        }
+        throw new Error('Null receipt received')
       }
 
-      // if rpc has been changed, update the global current rpc index
-      if (rpcIndex !== initialRpcIndex) {
-        isMainnet
-          ? config.mainnetRpcIndex = rpcIndex
-          : config.testnetRpcIndex = rpcIndex
+      if (!result) {
+        throw new Error('Null result received')
       }
+
       break
     } catch (error) {
       if (error.type === errorTypes.TxNotCheckpointed ||
