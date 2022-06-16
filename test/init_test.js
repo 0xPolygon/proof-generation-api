@@ -233,4 +233,20 @@ describe('Proof Generation API Tests', () => {
         done()
       })
   })
+
+  it('erc721 all exit payloads test', (done) => {
+    chai
+      .request(baseUrl)
+      .get(
+        '/api/v1/mumbai/all-exit-payloads/0x54f47c891b460369661e22e27eeb4afbbb5dd792c7c8b48cab758892c14ffe85?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+      )
+      .end(function(err, res) {
+        if (err) {
+          console.log(err)
+        }
+        expect(res).to.have.status(200)
+        expect(res.body.result.length).to.equal(2)
+        done()
+      })
+  })
 })
