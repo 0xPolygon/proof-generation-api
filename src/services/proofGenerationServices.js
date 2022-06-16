@@ -25,10 +25,10 @@ export async function isBlockIncluded(blockNumber, isMainnet) {
     ? config.mainnetRpcIndex
     : config.testnetRpcIndex
 
-  var result
+  let result
 
   // loop over rpcs to retry in case of an rpc error
-  for (var i = 0; i < maxRetries; i++) {
+  for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength
     try {
       // initialize matic client
@@ -98,10 +98,10 @@ export async function fastMerkleProof(start, end, number, isMainnet) {
     ? config.mainnetRpcIndex
     : config.testnetRpcIndex
 
-  var proof
+  let proof
 
   // loop over rpcs to retry in case of an rpc error
-  for (var i = 0; i < maxRetries; i++) {
+  for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength
     try {
       // initialize matic client
@@ -146,13 +146,13 @@ export async function generateExitPayload(
     ? config.mainnetRpcIndex
     : config.testnetRpcIndex
 
-  var result
-  var isCheckpointed
+  let result
+  let isCheckpointed
 
   logger.info(`max retries ${maxRetries}`)
 
   // loop over rpcs to retry in case of an in case of an rpc error
-  for (var i = 0; i < maxRetries; i++) {
+  for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength
     logger.info(`rpcIndex ${rpcIndex}`)
     try {
@@ -249,13 +249,13 @@ export async function generateAllExitPayloads(
     ? config.mainnetRpcIndex
     : config.testnetRpcIndex
 
-  var result
-  var isCheckpointed
+  let result
+  let isCheckpointed
 
   logger.info(`max retries ${maxRetries}`)
 
   // loop over rpcs to retry in case of an in case of an rpc error
-  for (var i = 0; i < maxRetries; i++) {
+  for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength
     logger.info(`rpcIndex ${rpcIndex}`)
     try {

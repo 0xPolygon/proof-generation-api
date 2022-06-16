@@ -4,12 +4,12 @@ module.exports = {
     'space-before-function-paren': ['error', 'never'],
     'no-underscore-dangle': 0
   },
-  "overrides": [
+  overrides: [
     {
-        "files": ["*test.js"],
-        "rules": {
-            "no-unused-expressions": "off"
-        }
+      files: ['*test.js'],
+      rules: {
+        'no-unused-expressions': 'off'
+      }
     }
   ]
 }
