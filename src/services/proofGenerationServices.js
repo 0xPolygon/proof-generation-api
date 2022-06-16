@@ -135,6 +135,7 @@ export async function fastMerkleProof(start, end, number, isMainnet) {
 export async function generateExitPayload(
   burnTxHash,
   eventSignature,
+  tokenIndex,
   isMainnet
 ) {
   const maticRPC = isMainnet ? config.app.maticRPC : config.app.mumbaiRPC
@@ -188,10 +189,17 @@ export async function generateExitPayload(
       try {
         result = await maticClient.exitUtil.buildPayloadForExit(
           burnTxHash,
-          0,
+          tokenIndex,
           eventSignature
         )
       } catch (error) {
+        logger.error(error)
+        if (
+          error.message ===
+          'Index is grater than the number of tokens in this transaction'
+        ) {
+          throw new InfoError(errorTypes.BlockNotIncluded, error.message)
+        }
         if (i === maxRetries - 1) {
           throw new InfoError(
             errorTypes.BlockNotIncluded,
@@ -286,7 +294,6 @@ export async function generateAllExitPayloads(
           burnTxHash,
           eventSignature
         )
-        console.log(result)
       } catch (error) {
         if (i === maxRetries - 1) {
           throw new InfoError(
@@ -303,6 +310,7 @@ export async function generateAllExitPayloads(
 
       break
     } catch (error) {
+      logger.error(error)
       if (
         error.type === errorTypes.TxNotCheckpointed ||
         error.type === errorTypes.IncorrectTx ||

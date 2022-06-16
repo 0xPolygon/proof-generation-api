@@ -99,6 +99,10 @@ router.get(
  *       in: query
  *       description: Enter the event signature
  *       required: true
+ *     - name: tokenIndex
+ *       in: query
+ *       description: Index of the tokenId in the tokenIds list in burnTransaction
+ *       required: false
  *    responses:
  *       '200':
  *        description: A successful response
@@ -119,8 +123,8 @@ router.get(
  * @swagger
  * /{network}/all-exit-payload/{burnTxHash} :
  *  get:
- *    summary : Returns the payload to complete the exit/proof submission.
- *    description: Returns the input payload that has to be passed to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
+ *    summary : Returns an array of payloads of all tokens in a particular burnTx to complete the exit/proof submission.
+ *    description: Returns the input payloads that has to be passed individually to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
  *    tags:
  *     - v1
  *    parameters:

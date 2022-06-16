@@ -54,9 +54,11 @@ export default {
       const isMainnet = req.params.network === 'matic'
       const burnTxHash = req.params.burnTxHash
       const eventSignature = req.query.eventSignature
+      const tokenIndex = req.query.tokenIndex || 0
       const responseObj = await generateExitPayload(
         burnTxHash,
         eventSignature,
+        tokenIndex,
         isMainnet
       )
       handleResponse({ res, data: responseObj })
