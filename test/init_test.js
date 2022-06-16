@@ -3,6 +3,7 @@ const chai = require('chai')
 const chaiHttp = require('chai-http')
 const expect = chai.expect
 const baseUrl = `localhost:${process.env.npm_config_port ? process.env.npm_config_port : 5000}`
+// const baseUrl = 'https://apis.matic.network'
 
 chai.use(chaiHttp)
 describe('Proof Generation API Tests', () => {
