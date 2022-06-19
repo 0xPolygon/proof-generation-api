@@ -33,7 +33,11 @@ const router = express.Router({
  *       '500':
  *        description: Internal Server Error
  */
-router.get('/block-included/:blockNumber', validateParams.validateBlockIncludedParams, v1Controller.isBlockIncluded)
+router.get(
+  '/block-included/:blockNumber',
+  validateParams.validateBlockIncludedParams,
+  v1Controller.isBlockIncluded
+)
 
 /**
  * @swagger
@@ -68,7 +72,11 @@ router.get('/block-included/:blockNumber', validateParams.validateBlockIncludedP
  *       '500':
  *        description: Internal Server Error
  */
-router.get('/fast-merkle-proof', validateParams.validateFastMerkleProofParams, v1Controller.fastMerkleProof)
+router.get(
+  '/fast-merkle-proof',
+  validateParams.validateFastMerkleProofParams,
+  v1Controller.fastMerkleProof
+)
 
 /**
  * @swagger
@@ -76,6 +84,47 @@ router.get('/fast-merkle-proof', validateParams.validateFastMerkleProofParams, v
  *  get:
  *    summary : Returns the payload to complete the exit/proof submission.
  *    description: Returns the input payload that has to be passed to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
+ *    tags:
+ *     - v1
+ *    parameters:
+ *     - name: network
+ *       in: path
+ *       description: Enter network. Must either be 'matic' for mainnet or 'mumbai' for testnet
+ *       required: true
+ *     - name: burnTxHash
+ *       in: path
+ *       description: Enter the burn TransactionHash
+ *       required: true
+ *     - name: eventSignature
+ *       in: query
+ *       description: Enter the event signature
+ *       required: true
+ *     - name: tokenIndex
+ *       in: query
+ *       description: Index of the tokenId in the tokenIds list in burnTransaction
+ *       required: false
+ *    responses:
+ *       '200':
+ *        description: A successful response
+ *       '404':
+ *        description: No Block found
+ *       '400':
+ *        description: Invalid parameters
+ *       '500':
+ *        description: Internal Server Error
+ */
+router.get(
+  '/exit-payload/:burnTxHash',
+  validateParams.validateExitPayloadParams,
+  v1Controller.exitPayload
+)
+
+/**
+ * @swagger
+ * /{network}/all-exit-payload/{burnTxHash} :
+ *  get:
+ *    summary : Returns an array of payloads of all tokens in a particular burnTx to complete the exit/proof submission.
+ *    description: Returns the input payloads that has to be passed individually to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
  *    tags:
  *     - v1
  *    parameters:
@@ -101,6 +150,10 @@ router.get('/fast-merkle-proof', validateParams.validateFastMerkleProofParams, v
  *       '500':
  *        description: Internal Server Error
  */
-router.get('/exit-payload/:burnTxHash', validateParams.validateExitPayloadParams, v1Controller.exitPayload)
+router.get(
+  '/all-exit-payloads/:burnTxHash',
+  validateParams.validateExitPayloadParams,
+  v1Controller.allExitPayloads
+)
 
 export default router

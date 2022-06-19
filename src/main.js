@@ -16,9 +16,11 @@ const app = express()
 
 app.use(cors())
 app.use(express.json())
-app.use(express.urlencoded({
-  extended: false
-}))
+app.use(
+  express.urlencoded({
+    extended: false
+  })
+)
 
 // defining swagger options
 const swaggerOptions = {
@@ -37,9 +39,7 @@ const swaggerOptions = {
     },
     basePath: '/api/v1',
     host: 'apis.matic.network',
-    schemes: [
-      'https'
-    ]
+    schemes: ['https']
   },
   apis: ['./src/routes/v1.js']
 }
@@ -50,7 +50,7 @@ app.use('/swagger', swaggerUi.serve, swaggerUi.setup(swaggerDocs))
 // APIs
 app.use('/api', indexRoutes)
 app.get('/', async(req, res) => {
-  const result = listEndpoints(app).map(c => {
+  const result = listEndpoints(app).map((c) => {
     return {
       path: c.path,
       methods: c.methods.join(',')
@@ -61,7 +61,9 @@ app.get('/', async(req, res) => {
 
 // healthcheck endpoint
 app.get('/health-check', (req, res) => {
-  return res.status(200).json({ success: true, message: 'Health Check Success' })
+  return res
+    .status(200)
+    .json({ success: true, message: 'Health Check Success' })
 })
 
 // Invalid endpoint error handling
@@ -81,15 +83,15 @@ app.use((error, req, res, next) => {
 })
 
 // list endpoints
-console.log('-----------------------------------------')
-listEndpoints(app).forEach(c => {
-  console.log(`${c.methods.join(',')} -> ${c.path}`)
+logger.info('-----------------------------------------')
+listEndpoints(app).forEach((c) => {
+  logger.info(`${c.methods.join(',')} -> ${c.path}`)
 })
-console.log('-----------------------------------------')
+logger.info('-----------------------------------------')
 
 // start app server
 app.listen(config.app.port, function() {
-  logger.info('Proof Generation API server has started', {
-    port: config.app.port
-  })
+  logger.info(
+    `Proof Generation API server has started on port ${config.app.port}`
+  )
 })
