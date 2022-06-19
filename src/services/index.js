@@ -1,1 +1,6 @@
-export { isBlockIncluded, fastMerkleProof, generateExitPayload } from './proofGenerationServices'
+export {
+  isBlockIncluded,
+  fastMerkleProof,
+  generateExitPayload,
+  generateAllExitPayloads
+} from './proofGenerationServices'

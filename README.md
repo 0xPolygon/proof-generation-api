@@ -108,11 +108,42 @@ The following endpoints with the exception of "list all" and "healthcheck" are w
        - description: event signature (keccack256 value of the corresponding Transfer function)
        - required: true
 
+    3. - name: tokenIndex
+       - in: query
+       - description: Index of the tokenId in the tokenIds list in burnTransaction
+       - required: false
+
   - successful response body:
     ```
       {
         "message": "Payload generation success",
         "result": exit proof
+      }
+    ```
+
+### All Exit Payloads
+
+* GET `/api/v1/matic/all-exit-payloads/{burnTxHash}?eventSignature={eventSignature}`   
+  - summary: Returns an array of payloads of all tokens in a particular burnTx to complete the exit/proof submission.
+
+  - description: Returns the input payloads that has to be passed individually to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
+
+  - parameters:
+    1. - name: burnTxHash
+       - in: path
+       - description: burn TransactionHash
+       - required: true
+
+    2. - name: eventSignature
+       - in: query
+       - description: event signature (keccack256 value of the corresponding Transfer function)
+       - required: true
+
+  - successful response body:
+    ```
+      {
+        "message": "Payload generation success",
+        "result": [exit proof 1, exit proof 2, ...]
       }
     ```
 
