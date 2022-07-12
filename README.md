@@ -89,11 +89,11 @@ The following endpoints with the exception of "list all" and "healthcheck" are w
         "message": "success"
       }
     ```
-    ```
+    ```json
     // "error: true" is deprecated
     // If the block is not chekpointed yet, only the message param will be sent
     {
-      "message": "No block found",
+      "message": "No block found"
     }
     ```
 
