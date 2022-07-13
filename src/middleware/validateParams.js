@@ -11,7 +11,28 @@ export default {
    * @param {Response} res
    * @param {NextFunctin} next
    * @returns {void}
-  */
+   */
+
+  // network params validation
+  validateNetworkParam: (req, res, next) => {
+    const network = req.params.network
+    try {
+      // network can either be matic or mumbai
+      if (network !== 'matic' && network !== 'mumbai') {
+        return handleBadRequest({
+          res,
+          errMsg: `Invalid network ${network}. Network can either be matic or mumbai`
+        })
+      }
+      next()
+    } catch (error) {
+      logger.error('error in validateNetworkParam', error)
+      handleError({
+        res,
+        errMsg: 'Something went wrong while validating params'
+      })
+    }
+  },
 
   // block-included params validation
   validateBlockIncludedParams: (req, res, next) => {
@@ -24,7 +45,10 @@ export default {
       next()
     } catch (error) {
       logger.error('error in validateBlockIncluded Params', error)
-      handleError({ res, errMsg: 'Something went wrong while validating params' })
+      handleError({
+        res,
+        errMsg: 'Something went wrong while validating params'
+      })
     }
   },
 
@@ -36,7 +60,8 @@ export default {
 
     try {
       // params must be integers
-      const invalidArgs = !isInteger(start) || !isInteger(end) | !isInteger(number)
+      const invalidArgs =
+        !isInteger(start) || !isInteger(end) | !isInteger(number)
 
       start = parseInt(start, 10)
       end = parseInt(end, 10)
@@ -45,12 +70,18 @@ export default {
       // start must be less than or equal to number
       // end must be greater than or equal to start
       if (invalidArgs || end < start || number > end || number < start) {
-        return handleBadRequest({ res, errMsg: 'Invalid start or end or block numbers!' })
+        return handleBadRequest({
+          res,
+          errMsg: 'Invalid start or end or block numbers!'
+        })
       }
       next()
     } catch (error) {
       logger.error('error in validateFastMerkleProof Params', error)
-      handleError({ res, errMsg: 'Something went wrong while validating params' })
+      handleError({
+        res,
+        errMsg: 'Something went wrong while validating params'
+      })
     }
   },
 
@@ -62,17 +93,31 @@ export default {
     try {
       // burn tx hash and event signature are required
       if (!burnTxHash || !eventSignature) {
-        return handleBadRequest({ res, errMsg: 'Burn tx or Event Signature missing!' })
+        return handleBadRequest({
+          res,
+          errMsg: 'Burn tx or Event Signature missing!'
+        })
       }
 
       // burn tx hash and event signature starts with 0x and their lengths must be equal to 66
-      if (!burnTxHash.startsWith('0x') || !eventSignature.startsWith('0x') || burnTxHash.length !== 66 || eventSignature.length !== 66) {
-        return handleBadRequest({ res, errMsg: 'Incorrect Burn tx or Event Signature!' })
+      if (
+        !burnTxHash.startsWith('0x') ||
+        !eventSignature.startsWith('0x') ||
+        burnTxHash.length !== 66 ||
+        eventSignature.length !== 66
+      ) {
+        return handleBadRequest({
+          res,
+          errMsg: 'Incorrect Burn tx or Event Signature!'
+        })
       }
       next()
     } catch (error) {
       logger.error('error in validateExitPayload Params', error)
-      handleError({ res, errMsg: 'Something went wrong while validating params' })
+      handleError({
+        res,
+        errMsg: 'Something went wrong while validating params'
+      })
     }
   }
 }
