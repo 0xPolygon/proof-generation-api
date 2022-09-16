@@ -189,8 +189,9 @@ export async function generateExitPayload(
       try {
         result = await maticClient.exitUtil.buildPayloadForExit(
           burnTxHash,
-          tokenIndex,
-          eventSignature
+          eventSignature,
+          false,
+          tokenIndex
         )
       } catch (error) {
         logger.error(error)
@@ -252,7 +253,7 @@ export async function generateAllExitPayloads(
   let result
   let isCheckpointed
 
-  logger.info(`max retries ${maxRetries}`)
+  logger.info(`max retries ${maxRetries}, ${ethereumRPC}`)
 
   // loop over rpcs to retry in case of an in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
@@ -292,7 +293,8 @@ export async function generateAllExitPayloads(
       try {
         result = await maticClient.exitUtil.buildMultiplePayloadsForExit(
           burnTxHash,
-          eventSignature
+          eventSignature,
+          false
         )
       } catch (error) {
         if (i === maxRetries - 1) {
