@@ -25,5 +25,6 @@ export default {
   debug: debug,
   networks: config.networks,
   mainnetRpcIndex: 0,
-  testnetRpcIndex: 0
+  testnetRpcIndex: 0,
+  datadogApiKey: config.app.datadogApiKey
 }

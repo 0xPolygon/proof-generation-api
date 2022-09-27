@@ -12,3 +12,4 @@ app:
     - https url for eth rpc2
   goerliRPC: https url for goerli rpc2
   mumbaiRPC: https url for mumbai rpc2
+  datadogApiKey: datadog api key
