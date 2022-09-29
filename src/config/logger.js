@@ -1,6 +1,15 @@
 // winston logger for logging errors and info level logs into error.log and combined.log
 
 import { createLogger, format, transports } from 'winston'
+import config from '../config/globals'
+import Sentry from 'winston-transport-sentry-node'
+
+const options = {
+  sentry: {
+    dsn: config.sentry.dsn
+  },
+  level: 'error'
+}
 
 const logFormat = format.combine(
   format.colorize({
@@ -17,6 +26,12 @@ const logFormat = format.combine(
   )
 )
 
+const httpTransportOptions = {
+  host: 'http-intake.logs.datadoghq.com',
+  path: '/api/v2/logs?dd-api-key=' + config.datadogApiKey + '&ddsource=nodejs&service=' + config.app.name,
+  ssl: true
+}
+
 const logger = createLogger({
   level: 'info',
   format: format.combine(
@@ -31,8 +46,10 @@ const logger = createLogger({
     // - Write all logs with level `error` and below to `error.log`
     // - Write all logs with level `info` and below to `combined.log`
     //
+    new Sentry(options),
     new transports.File({ filename: 'log/error.log', level: 'error' }),
-    new transports.File({ filename: 'log/combined.log' })
+    new transports.File({ filename: 'log/combined.log' }),
+    httpTransportOptions
   ]
 })
 
