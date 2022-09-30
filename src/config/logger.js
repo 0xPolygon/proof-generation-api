@@ -49,7 +49,7 @@ const logger = createLogger({
     new Sentry(options),
     new transports.File({ filename: 'log/error.log', level: 'error' }),
     new transports.File({ filename: 'log/combined.log' }),
-    httpTransportOptions
+    new transports.Http(httpTransportOptions)
   ]
 })
 
