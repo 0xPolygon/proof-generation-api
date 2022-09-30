@@ -28,6 +28,6 @@ export default {
   testnetRpcIndex: 0,
   datadogApiKey: config.app.datadogApiKey,
   sentry: {
-    dsn: process.env.sentryDsn
+    dsn: config.app.sentryDsn
   }
 }
