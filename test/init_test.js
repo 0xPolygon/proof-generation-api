@@ -1,10 +1,16 @@
 /* eslint-disable no-undef */
+const configYaml = require('config-yaml')
+const path = require('path')
 const chai = require('chai')
 const chaiHttp = require('chai-http')
 const expect = chai.expect
-const baseUrl = `localhost:${
-  process.env.npm_config_port ? process.env.npm_config_port : 5000
-}`
+
+const root = path.normalize(`${__dirname}/..`)
+const fileName = '/config.yml'
+const configFile = `${root}${fileName}`
+const config = configYaml(configFile)
+
+const baseUrl = `localhost:${parseInt(config.app.port || 5000, 10)}`
 
 chai.use(chaiHttp)
 describe('Proof Generation API Tests', () => {

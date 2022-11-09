@@ -37,6 +37,7 @@ export default {
       const responseObj = await fastMerkleProof(start, end, number, isMainnet)
       if (!verifyMerkleProof(number, start, responseObj.proof)) {
         handleError({ res, errMsg: 'Invalid merkle proof created' })
+        return
       }
       handleResponse({ res, data: responseObj })
     } catch (error) {
