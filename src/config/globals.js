@@ -1,33 +1,21 @@
-// global variables defined in config.yml
+import { config } from 'dotenv'
 
-import configYaml from 'config-yaml'
-import path from 'path'
+config()
 
-// load config env
-const root = path.normalize(`${__dirname}/../..`)
-
-const fileName = '/config.yml'
-
-const configFile = `${root}${fileName}`
-
-const config = configYaml(configFile)
-
-const debug = config.debug !== 'production'
+const debug = process.env.NODE_ENV !== 'production'
 export default {
   app: {
-    name: config.app.name || 'Proof Generation API',
-    port: parseInt(config.app.port || 5000, 10),
-    maticRPC: config.app.maticRPCs,
-    ethereumRPC: config.app.ethereumRPCs,
-    goerliRPC: config.app.goerliRPC,
-    mumbaiRPC: config.app.mumbaiRPC
+    name: process.env.NAME || 'Proof Generation API',
+    port: parseInt(process.env.PORT || 5000, 10),
+    maticRPC: JSON.parse(process.env.MATIC_RPC),
+    ethereumRPC: JSON.parse(process.env.ETHEREUM_RPC),
+    goerliRPC: JSON.parse(process.env.GOERLI_RPC),
+    mumbaiRPC: JSON.parse(process.env.MUMBAI_RPC)
   },
   debug: debug,
-  networks: config.networks,
   mainnetRpcIndex: 0,
   testnetRpcIndex: 0,
-  datadogApiKey: config.app.datadogApiKey,
   sentry: {
-    dsn: config.app.sentryDsn
+    dsn: process.env.SENTRY_DSN
   }
 }

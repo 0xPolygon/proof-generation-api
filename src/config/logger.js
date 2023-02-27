@@ -26,12 +26,6 @@ const logFormat = format.combine(
   )
 )
 
-const httpTransportOptions = {
-  host: 'http-intake.logs.datadoghq.com',
-  path: '/api/v2/logs?dd-api-key=' + config.datadogApiKey + '&ddsource=nodejs&service=' + config.app.name,
-  ssl: true
-}
-
 const logger = createLogger({
   level: 'info',
   format: format.combine(
@@ -42,14 +36,7 @@ const logger = createLogger({
   ),
   defaultMeta: { service: 'user-service' },
   transports: [
-    //
-    // - Write all logs with level `error` and below to `error.log`
-    // - Write all logs with level `info` and below to `combined.log`
-    //
-    new Sentry(options),
-    new transports.File({ filename: 'log/error.log', level: 'error' }),
-    new transports.File({ filename: 'log/combined.log' }),
-    new transports.Http(httpTransportOptions)
+    new Sentry(options)
   ]
 })
 
