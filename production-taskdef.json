@@ -12,7 +12,7 @@
                 "options": {
                     "Name": "datadog",
                     "Host": "http-intake.logs.datadoghq.com",
-                    "dd_service": "proof-generator-production",
+                    "dd_service": "proof-generator-api-prod",
                     "dd_source": "nodejs",
                     "TLS": "on",
                     "provider": "ecs"
