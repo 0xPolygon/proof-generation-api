@@ -3,4 +3,5 @@ export {
   fastMerkleProof,
   generateExitPayload,
   generateAllExitPayloads
-} from './proofGenerationServices'
+} from './v1ProofGenerationServices'
+export { bridge, merkelProofGenerator } from './zkEVMProofGenerationServices'
