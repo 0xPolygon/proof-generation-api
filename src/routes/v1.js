@@ -36,7 +36,7 @@ const router = express.Router({
 router.get(
   '/block-included/:blockNumber',
   validateParams.validateBlockIncludedParams,
-  validateParams.validateNetworkParam,
+  validateParams.validateV1NetworkParam,
   v1Controller.isBlockIncluded
 )
 
@@ -76,7 +76,7 @@ router.get(
 router.get(
   '/fast-merkle-proof',
   validateParams.validateFastMerkleProofParams,
-  validateParams.validateNetworkParam,
+  validateParams.validateV1NetworkParam,
   v1Controller.fastMerkleProof
 )
 
@@ -118,7 +118,7 @@ router.get(
 router.get(
   '/exit-payload/:burnTxHash',
   validateParams.validateExitPayloadParams,
-  validateParams.validateNetworkParam,
+  validateParams.validateV1NetworkParam,
   v1Controller.exitPayload
 )
 
@@ -156,7 +156,7 @@ router.get(
 router.get(
   '/all-exit-payloads/:burnTxHash',
   validateParams.validateExitPayloadParams,
-  validateParams.validateNetworkParam,
+  validateParams.validateV1NetworkParam,
   v1Controller.allExitPayloads
 )
 
