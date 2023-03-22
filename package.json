@@ -1,52 +1,52 @@
 {
-  "name": "proof-generation-api",
-  "version": "0.0.1",
-  "description": "Generates Proof to be used while withdrawing assets from Polygon to Ethereum",
-  "main": "index.js",
-  "private": true,
-  "scripts": {
-    "dev": "node src/index.js",
-    "dev-checkpoint": "node src/helpers/checkpoint-cronjob.js",
-    "checkpoint": "node src/helpers/checkpoint-cronjob.js",
-    "start": "node src/index.js",
-    "lint": "eslint src/*.js src/**/*.js",
-    "lint:fix": "eslint --fix src/*.js src/**/*.js test/*.js",
-    "test": "mocha --timeout 30000"
-  },
-  "pre-commit": [
-    "lint"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/maticnetwork/proof-generation-api.git"
-  },
-  "author": "Rahul Prabhu <rahul.prabhu@polygon.technology>",
-  "license": "ISC",
-  "dependencies": {
-    "@maticnetwork/maticjs": "^3.5.0",
-    "@maticnetwork/maticjs-web3": "^1.0.2",
-    "compression": "^1.7.4",
-    "cors": "^2.8.5",
-    "dotenv": "^16.0.3",
-    "esm": "^3.2.25",
-    "express": "^4.17.1",
-    "express-list-endpoints": "^6.0.0",
-    "helmet": "^4.6.0",
-    "pre-commit": "^1.2.2",
-    "swagger-jsdoc": "^6.1.0",
-    "swagger-ui-express": "^4.5.0",
-    "winston": "^3.3.3",
-    "winston-transport-sentry-node": "^2.6.0"
-  },
-  "devDependencies": {
-    "chai": "^4.3.4",
-    "chai-http": "^4.3.0",
-    "eslint": "^6.8.0",
-    "eslint-config-standard": "^14.1.1",
-    "eslint-plugin-import": "^2.20.2",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-standard": "^4.0.1",
-    "mocha": "^10.0.0"
-  }
+    "name": "proof-generation-api",
+    "version": "0.0.1",
+    "description": "Generates Proof to be used while withdrawing assets from Polygon to Ethereum",
+    "main": "index.js",
+    "private": true,
+    "scripts": {
+        "dev": "node src/index.js",
+        "dev-checkpoint": "node src/helpers/checkpoint-cronjob.js",
+        "checkpoint": "node src/helpers/checkpoint-cronjob.js",
+        "start": "node src/index.js",
+        "lint": "eslint src/*.js src/**/*.js",
+        "lint:fix": "eslint --fix src/*.js src/**/*.js test/*.js",
+        "test": "mocha --timeout 30000"
+    },
+    "pre-commit": [
+        "lint"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/maticnetwork/proof-generation-api.git"
+    },
+    "author": "Rahul Prabhu <rahul.prabhu@polygon.technology>",
+    "license": "ISC",
+    "dependencies": {
+        "@maticnetwork/maticjs": "^3.5.0",
+        "@maticnetwork/maticjs-web3": "^1.0.2",
+        "compression": "^1.7.4",
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.3",
+        "esm": "^3.2.25",
+        "express": "^4.17.1",
+        "express-list-endpoints": "^6.0.0",
+        "helmet": "^4.6.0",
+        "pre-commit": "^1.2.2",
+        "swagger-jsdoc": "^6.1.0",
+        "swagger-ui-express": "^4.5.0",
+        "winston": "^3.3.3",
+        "winston-transport-sentry-node": "^2.6.0"
+    },
+    "devDependencies": {
+        "chai": "^4.3.4",
+        "chai-http": "^4.3.0",
+        "eslint": "^6.8.0",
+        "eslint-config-standard": "^14.1.1",
+        "eslint-plugin-import": "^2.20.2",
+        "eslint-plugin-node": "^11.1.0",
+        "eslint-plugin-promise": "^4.2.1",
+        "eslint-plugin-standard": "^4.0.1",
+        "mocha": "^10.0.0"
+    }
 }

@@ -10,7 +10,9 @@ export default {
     maticRPC: JSON.parse(process.env.MATIC_RPC),
     ethereumRPC: JSON.parse(process.env.ETHEREUM_RPC),
     goerliRPC: JSON.parse(process.env.GOERLI_RPC),
-    mumbaiRPC: JSON.parse(process.env.MUMBAI_RPC)
+    mumbaiRPC: JSON.parse(process.env.MUMBAI_RPC),
+    zkEVMMainnetURL: process.env.ZKEVM_MAINNET_URL,
+    zkEVMTestnetURL: process.env.ZKEVM_TESTNET_URL
   },
   debug: debug,
   mainnetRpcIndex: 0,
