@@ -1,7 +1,5 @@
 {
-    "requiresCompatibilities": [
-        "FARGATE"
-    ],
+    "requiresCompatibilities": ["FARGATE"],
     "inferenceAccelerators": [],
     "containerDefinitions": [
         {
@@ -37,15 +35,14 @@
             "cpu": 0,
             "environment": [
                 {
-                  "name": "PORT",
-                  "value": "5000"
+                    "name": "PORT",
+                    "value": "5000"
                 },
                 {
-                  "name": "NODE_ENV",
-                  "value": "production"
+                    "name": "NODE_ENV",
+                    "value": "production"
                 }
-
-              ],
+            ],
             "resourceRequirements": null,
             "ulimits": null,
             "dnsServers": null,
@@ -71,8 +68,16 @@
                 {
                     "valueFrom": "arn:aws:ssm:us-east-2:042947190491:parameter/proof-generator/SENTRY_DSN",
                     "name": "SENTRY_DSN"
+                },
+                {
+                    "valueFrom": "arn:aws:ssm:us-east-2:042947190491:parameter/proof-generator/ZKEVM_MAINNET_URL",
+                    "name": "ZKEVM_MAINNET_URL"
+                },
+                {
+                    "valueFrom": "arn:aws:ssm:us-east-2:042947190491:parameter/proof-generator/ZKEVM_TESTNET_URL",
+                    "name": "ZKEVM_TESTNET_URL"
                 }
-              ],
+            ],
             "dockerSecurityOptions": null,
             "memory": null,
             "memoryReservation": null,
@@ -141,7 +146,7 @@
     "runtimePlatform": {
         "operatingSystemFamily": "LINUX"
     },
-    "tags":  [
+    "tags": [
         {
             "key": "Role",
             "value": "backend-application"
