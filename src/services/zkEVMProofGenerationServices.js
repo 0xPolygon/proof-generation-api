@@ -1,5 +1,8 @@
 /* eslint-disable no-undef */
 import config from '../config/globals'
+import { InfoError } from '../helpers/errorHelper'
+import errorTypes from '../config/errorTypes'
+import logger from '../config/logger'
 
 /**
  *
@@ -19,11 +22,8 @@ export async function bridge(networkID, depositCount, isMainnet) {
   const data = await response.json()
 
   if (response.status !== 200) {
-    throw new Error(
-            `Error hitting ${zkEVMURL} with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(
-                data
-            )}`
-    )
+    logger.info(`Error hitting ${zkEVMURL} bridge with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(data)}`)
+    throw new InfoError(errorTypes.ZKEVMError, data.message)
   }
   return data
 }
@@ -46,11 +46,8 @@ export async function merkelProofGenerator(networkID, depositCount, isMainnet) {
   const data = await response.json()
 
   if (response.status !== 200) {
-    throw new Error(
-            `Error hitting ${zkEVMURL} with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(
-                data
-            )}`
-    )
+    logger.info(`Error hitting ${zkEVMURL} merkle proof with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(data)}`)
+    throw new InfoError(errorTypes.ZKEVMError, data.message)
   }
   return data
 }
