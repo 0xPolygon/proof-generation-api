@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 env:
   AWS_REGION: eu-west-1
-  ECR_REPOSITORY: proof-generator-ecr
+  ECR_REPOSITORY: proof-generator-staging-ecr
   ECS_SERVICE: proof-generator-staging-ecs-service
   ECS_CLUSTER: backend-apis-staging-ecs-cluster 
   ECS_TASK_DEFINITION: staging-taskdef.json
