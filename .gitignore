@@ -9,3 +9,4 @@ pids/
 *.rdb
 config.yml
 report.*.*.*
+.github/workflows/
