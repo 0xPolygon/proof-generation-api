@@ -4,12 +4,12 @@ on:
     branches: ['master']
   workflow_dispatch:
 env:
-  AWS_REGION: us-east-2
-  ECR_REPOSITORY: proof-generator-ecr
-  ECS_SERVICE: proof-generator-ecs-service
-  ECS_CLUSTER: proof-generator-ecs-cluster 
+  AWS_REGION: eu-west-1
+  ECR_REPOSITORY: proof-generator-api-ecr
+  ECS_SERVICE: proof-generator-api-ecs-service
+  ECS_CLUSTER: backend-apis-ecs-cluster
   ECS_TASK_DEFINITION: production-taskdef.json
-  CONTAINER_NAME: proof-generator
+  CONTAINER_NAME: proof-generator-api
 
 
 jobs:
@@ -27,7 +27,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-region: ${{ env.AWS_REGION }}
-          role-to-assume: arn:aws:iam::042947190491:role/proof-generator-GithubActionsRole
+          role-to-assume: arn:aws:iam::042947190491:role/proof-generator-api-GithubActionsRole
           role-session-name: proof-generatorGithubActionsSession
       - name: Login to Amazon ECR
         id: login-ecr
