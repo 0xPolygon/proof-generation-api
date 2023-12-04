@@ -19,7 +19,8 @@ async function initMatic(isMainnet, maticRPC, ethereumRPC) {
     child: {
       provider: maticRPC,
       defaultConfig: {}
-    }
+    },
+    rootChainDefaultBlock: 'latest'
   }
   const posClient = new POSClient()
   await posClient.init(maticConfig)
