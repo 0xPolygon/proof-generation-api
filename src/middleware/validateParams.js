@@ -18,7 +18,7 @@ export default {
     const network = req.params.network
     try {
       // network can either be matic or mumbai
-      if (network !== 'matic' && network !== 'mumbai') {
+      if (network !== 'matic' && network !== 'mumbai' && network !== 'amoy') {
         return handleBadRequest({
           res,
           errMsg: `Invalid network ${network}. Network can either be matic or mumbai for PoS v1 routes`
@@ -39,7 +39,7 @@ export default {
     const network = req.params.network
     try {
       // network can either be matic or mumbai
-      if (network !== 'mainnet' && network !== 'testnet') {
+      if (network !== 'mainnet' && network !== 'testnet' && network !== 'cherry' && network !== 'blueberry' && network !== 'cardona') {
         return handleBadRequest({
           res,
           errMsg: `Invalid network ${network}. Network can either be mainnet or testnet for zkEVM routes`

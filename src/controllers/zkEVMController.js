@@ -10,11 +10,11 @@ export default {
     try {
       const networkID = req.query.net_id
       const depositCount = req.query.deposit_cnt
-      const isMainnet = req.params.network === 'mainnet'
+      const network = req.params.network
       const responseObj = await bridge(
         networkID,
         depositCount,
-        isMainnet
+        network
       )
       console.log(responseObj)
       handleResponse({ res, data: responseObj })
@@ -32,11 +32,11 @@ export default {
     try {
       const networkID = req.query.net_id
       const depositCount = req.query.deposit_cnt
-      const isMainnet = req.params.network === 'mainnet'
+      const network = req.params.network
       const responseObj = await merkelProofGenerator(
         networkID,
         depositCount,
-        isMainnet
+        network
       )
       handleResponse({ res, data: responseObj })
     } catch (error) {
