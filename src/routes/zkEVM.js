@@ -8,20 +8,23 @@ const router = express.Router({
 
 /**
  * @swagger
- * /{network}/block-included/{blockNumber} :
+ * /{network}/bridge/ :
  *  get:
- *    summary: Check if a block is checkpointed.
- *    description: Checks if a block on Polygon Mainnet has been checkpointed to the Ethereum Mainnet by the validators. Also this endpoint returns details of the checkpoint in which the block has been included.
+ *    summary: Check the bridge details using deposit count and network
  *    tags:
- *     - v1
+ *     - zkEVM
  *    parameters:
  *     - name: network
  *       in: path
- *       description: Enter network. Must either be 'matic' for mainnet or 'mumbai' for testnet
+ *       description: Enter network. Must either be 'mainnet' or 'cherry' for mainnet, 'testnet' or 'blueberry' for blueberry testnet, 'cardona' for cardona testnet
  *       required: true
- *     - name: blockNumber
- *       in: path
- *       description: Enter the block number
+ *     - name: net_id
+ *       in: query
+ *       description: Enter the network ID
+ *       required: true
+ *     - name: deposit_cnt
+ *       in: query
+ *       description: Enter the Deposit count
  *       required: true
  *    responses:
  *       '200':
@@ -42,28 +45,23 @@ router.get(
 
 /**
  * @swagger
- * /{network}/fast-merkle-proof :
+ * /{network}/merkle-proof :
  *  get:
- *    summary: Returns the fast merkle block proof.
- *    description: Returns the block proof by making use of an optimised logic that gets the block details with minimum possible RPC calls to the Polygon Mainnet. This block proof can be further used to create the final payload that has to be used to complete the exit/proof submission step on the Ethereum mainnet.
+ *    summary: Returns the merkle proof.
  *    tags:
- *     - v1
+ *     - zkEVM
  *    parameters:
  *     - name: network
  *       in: path
- *       description: Enter network. Must either be 'matic' for mainnet or 'mumbai' for testnet
+ *       description: Enter network. Must either be 'mainnet' or 'cherry' for mainnet, 'testnet' or 'blueberry' for blueberry testnet, 'cardona' for cardona testnet
  *       required: true
- *     - name: start
+ *     - name: net_id
  *       in: query
- *       description: Enter the start block
+ *       description: Enter the network ID
  *       required: true
- *     - name: end
+ *     - name: deposit_cnt
  *       in: query
- *       description: Enter the end block
- *       required: true
- *     - name: number
- *       in: query
- *       description: Enter the Block Number
+ *       description: Enter the Deposit count
  *       required: true
  *    responses:
  *       '200':
