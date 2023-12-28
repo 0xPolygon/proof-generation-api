@@ -1,5 +1,7 @@
 {
-    "requiresCompatibilities": ["FARGATE"],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
     "inferenceAccelerators": [],
     "containerDefinitions": [
         {
@@ -113,6 +115,36 @@
             "systemControls": null,
             "privileged": null,
             "name": "proof-generator-staging",
+            "repositoryCredentials": {
+                "credentialsParameter": ""
+            }
+        },
+        {
+            "essential": true,
+            "image": "amazon/aws-for-fluent-bit:stable",
+            "name": "log_router",
+            "firelensConfiguration": {
+                "type": "fluentbit",
+                "options": {
+                    "enable-ecs-log-metadata": "true"
+                }
+            },
+            "environment": null,
+            "secrets": null,
+            "memoryReservation": 50,
+            "resourceRequirements": null,
+            "portMappings": [],
+            "environmentFiles": [],
+            "mountPoints": null,
+            "volumesFrom": null,
+            "hostname": null,
+            "user": null,
+            "workingDirectory": null,
+            "extraHosts": null,
+            "logConfiguration": null,
+            "ulimits": null,
+            "dockerLabels": null,
+            "dependsOn": null,
             "repositoryCredentials": {
                 "credentialsParameter": ""
             }
