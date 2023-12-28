@@ -8,8 +8,19 @@
             "logConfiguration": {
                 "logDriver": "awsfirelens",
                 "options": {
-                    "@type": "null"
-                }
+                    "Name": "datadog",
+                    "Host": "http-intake.logs.datadoghq.com",
+                    "dd_service": "proof-generator-api-staging",
+                    "dd_source": "nodejs",
+                    "TLS": "on",
+                    "provider": "ecs"
+                },
+                "secretOptions": [
+                    {
+                        "name": "apiKey",
+                        "valueFrom": "arn:aws:ssm:eu-west-1:070528468658:parameter/proof-generator-staging/DATADOG_APIKEY"
+                    }
+                ]
             },
             "entryPoint": null,
             "portMappings": [
@@ -104,47 +115,6 @@
             "name": "proof-generator-staging",
             "repositoryCredentials": {
                 "credentialsParameter": ""
-            }
-        },
-        {
-            "name": "log_router_coralogix",
-            "image": "docker.io/coralogixrepo/fluentd-coralogix-ecs:v1.15.2",
-            "cpu": 0,
-            "portMappings": [],
-            "essential": true,
-            "environment": [
-                {
-                    "name": "APP_NAME",
-                    "value": "proof-generator-staging"
-                },
-                {
-                    "name": "ENDPOINT",
-                    "value": "api.coralogix.com"
-                },
-                {
-                    "name": "log_level",
-                    "value": "error"
-                },
-                {
-                    "name": "SUB_SYSTEM",
-                    "value": "proof-generator-staging-subsystem"
-                }
-            ],
-            "mountPoints": [],
-            "volumesFrom": [],
-            "secrets": [
-                {
-                    "name": "PRIVATE_KEY",
-                    "valueFrom": "arn:aws:ssm:eu-west-1:070528468658:parameter/proof-generator-staging/CORALOGIX_PRIVATE_KEY"
-                }
-            ],
-            "user": "0",
-            "firelensConfiguration": {
-                "type": "fluentd",
-                "options": {
-                    "config-file-type": "file",
-                    "config-file-value": "/fluentd/etc/firelens.conf"
-                }
             }
         }
     ],
