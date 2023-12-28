@@ -47,7 +47,7 @@
                     "name": "GOERLI_RPC"
                 },
                 {
-                    "valueFrom": "arn:aws:ssm:eu-west-1:042947190491:parameter/proof-generator-api/SEPOLIA_RPC",
+                    "valueFrom": "arn:aws:ssm:eu-west-1:070528468658:parameter/proof-generator-staging/SEPOLIA_RPC",
                     "name": "SEPOLIA_RPC"
                 },
                 {
@@ -59,7 +59,7 @@
                     "name": "MUMBAI_RPC"
                 },
                 {
-                    "valueFrom": "arn:aws:ssm:eu-west-1:042947190491:parameter/proof-generator-api/AMOY_RPC",
+                    "valueFrom": "arn:aws:ssm:eu-west-1:070528468658:parameter/proof-generator-staging/AMOY_RPC",
                     "name": "AMOY_RPC"
                 },
                 {
@@ -75,7 +75,7 @@
                     "name": "ZKEVM_TESTNET_URL"
                 },
                 {
-                    "valueFrom": "arn:aws:ssm:eu-west-1:042947190491:parameter/proof-generator-api/ZKEVM_NEW_TESTNET_URL",
+                    "valueFrom": "arn:aws:ssm:eu-west-1:070528468658:parameter/proof-generator-staging/ZKEVM_NEW_TESTNET_URL",
                     "name": "ZKEVM_NEW_TESTNET_URL"
                 }
             ],
