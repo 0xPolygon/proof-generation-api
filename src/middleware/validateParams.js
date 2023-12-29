@@ -21,7 +21,7 @@ export default {
       if (network !== 'matic' && network !== 'mumbai' && network !== 'amoy') {
         return handleBadRequest({
           res,
-          errMsg: `Invalid network ${network}. Network can either be matic or mumbai for PoS v1 routes`
+          errMsg: `Invalid network ${network}. Network can either be matic, mumbai or amoy for PoS v1 routes`
         })
       }
       next()
@@ -42,7 +42,7 @@ export default {
       if (network !== 'mainnet' && network !== 'testnet' && network !== 'cherry' && network !== 'blueberry' && network !== 'cardona') {
         return handleBadRequest({
           res,
-          errMsg: `Invalid network ${network}. Network can either be mainnet or testnet for zkEVM routes`
+          errMsg: `Invalid network ${network}. Network can either be mainnet or testnet or version including blueberry, cherry or cardona for zkEVM routes`
         })
       }
       next()
