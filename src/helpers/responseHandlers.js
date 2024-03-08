@@ -18,6 +18,7 @@ module.exports = {
   }) => {
     res.status(statusCode).send({
       errMsg,
+      msg: err instanceof Error ? err.message : err.msg || err,
       message: err instanceof Error ? err.message : err.msg || err
     })
   },
@@ -31,6 +32,7 @@ module.exports = {
   }) => {
     res.status(statusCode).send({
       error: true,
+      msg: err instanceof Error ? err.message : errMsg || err,
       message: err instanceof Error ? err.message : errMsg || err
     })
   },
