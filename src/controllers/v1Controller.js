@@ -14,11 +14,9 @@ import { InfoError } from '../helpers/errorHelper'
 export default {
   isBlockIncluded: async(req, res) => {
     try {
-      const network = req.params.network
-      const version = network === 'matic' ? 'v1' : network
-      const isMainnet = network === 'matic'
+      const isMainnet = req.params.network === 'matic'
       const blockNumber = req.params.blockNumber
-      const responseObj = await isBlockIncluded(blockNumber, isMainnet, version)
+      const responseObj = await isBlockIncluded(blockNumber, isMainnet)
       handleResponse({ res, data: responseObj })
     } catch (error) {
       if (error instanceof InfoError) {
@@ -32,13 +30,11 @@ export default {
 
   fastMerkleProof: async(req, res) => {
     try {
-      const network = req.params.network
-      const version = network === 'matic' ? 'v1' : network
-      const isMainnet = network === 'matic'
+      const isMainnet = req.params.network === 'matic'
       const start = req.query.start
       const end = req.query.end
       const number = req.query.number
-      const responseObj = await fastMerkleProof(start, end, number, isMainnet, version)
+      const responseObj = await fastMerkleProof(start, end, number, isMainnet)
       if (!verifyMerkleProof(number, start, responseObj.proof)) {
         handleError({ res, errMsg: 'Invalid merkle proof created' })
         return
@@ -56,9 +52,7 @@ export default {
 
   exitPayload: async(req, res) => {
     try {
-      const network = req.params.network
-      const version = network === 'matic' ? 'v1' : network
-      const isMainnet = network === 'matic'
+      const isMainnet = req.params.network === 'matic'
       const burnTxHash = req.params.burnTxHash
       const eventSignature = req.query.eventSignature
       const tokenIndex = req.query.tokenIndex || 0
@@ -66,8 +60,7 @@ export default {
         burnTxHash,
         eventSignature,
         tokenIndex,
-        isMainnet,
-        version
+        isMainnet
       )
       handleResponse({ res, data: responseObj })
     } catch (error) {
@@ -82,16 +75,13 @@ export default {
 
   allExitPayloads: async(req, res) => {
     try {
-      const network = req.params.network
-      const version = network === 'matic' ? 'v1' : network
-      const isMainnet = network === 'matic'
+      const isMainnet = req.params.network === 'matic'
       const burnTxHash = req.params.burnTxHash
       const eventSignature = req.query.eventSignature
       const responseObj = await generateAllExitPayloads(
         burnTxHash,
         eventSignature,
-        isMainnet,
-        version
+        isMainnet
       )
       handleResponse({ res, data: responseObj })
     } catch (error) {

@@ -4,33 +4,20 @@ import { InfoError } from '../helpers/errorHelper'
 import errorTypes from '../config/errorTypes'
 import logger from '../config/logger'
 
-function getBridgeAPIUrl(network) {
-  switch (network) {
-    case 'mainnet':
-    case 'cherry':
-      return config.app.zkEVMMainnetURL
-    case 'testnet':
-    case 'blueberry':
-      return config.app.zkEVMTestnetURL
-    case 'cardona':
-      return config.app.zkEVMNewTestnetURL
-    default:
-      return config.app.zkEVMMainnetURL
-  }
-}
-
 /**
  *
  * @param {number} networkID
  * @param {number} depositCount
- * @param {string} network
+ * @param {boolean} isMainnet
  * @returns
  */
-export async function bridge(networkID, depositCount, network) {
-  const zkEVMURL = getBridgeAPIUrl(network)
+export async function bridge(networkID, depositCount, isMainnet) {
+  const zkEVMURL = isMainnet
+    ? config.app.zkEVMMainnetURL
+    : config.app.zkEVMTestnetURL
 
   const response = await fetch(
-    `${zkEVMURL}/bridge?net_id=${networkID}&deposit_cnt=${depositCount}`
+        `${zkEVMURL}/bridge?net_id=${networkID}&deposit_cnt=${depositCount}`
   )
   const data = await response.json()
 
@@ -45,14 +32,16 @@ export async function bridge(networkID, depositCount, network) {
  *
  * @param {number} networkID
  * @param {number} depositCount
- * @param {string} network
+ * @param {boolean} isMainnet
  * @returns
  */
-export async function merkelProofGenerator(networkID, depositCount, network) {
-  const zkEVMURL = getBridgeAPIUrl(network)
+export async function merkelProofGenerator(networkID, depositCount, isMainnet) {
+  const zkEVMURL = isMainnet
+    ? config.app.zkEVMMainnetURL
+    : config.app.zkEVMTestnetURL
 
   const response = await fetch(
-    `${zkEVMURL}/merkle-proof?net_id=${networkID}&deposit_cnt=${depositCount}`
+        `${zkEVMURL}/merkle-proof?net_id=${networkID}&deposit_cnt=${depositCount}`
   )
   const data = await response.json()
 

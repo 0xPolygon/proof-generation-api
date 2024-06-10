@@ -8,48 +8,19 @@ const mainnetRPCLength = config.app.maticRPC.length // total mainnet rpcs
 const mainnetMaxRetries = 2 * mainnetRPCLength // max mainnet retries
 const testnetRPCLength = config.app.mumbaiRPC.length // total testnet rpcs
 const testnetMaxRetries = 2 * testnetRPCLength // max testnet retries
-const testnetAmoyRPCLength = config.app.amoyRPC.length // total amoy testnet rpcs
-const testnetAmoyMaxRetries = 2 * testnetAmoyRPCLength // max amoy testnet retries
-
-function getVersionDetails(version) {
-  switch (version) {
-    case 'v1': return {
-      ethereumRPC: config.app.ethereumRPC,
-      maticRPC: config.app.maticRPC,
-      maxRetries: mainnetMaxRetries,
-      rpcLength: mainnetRPCLength
-    }
-    case 'mumbai': return {
-      ethereumRPC: config.app.goerliRPC,
-      maticRPC: config.app.mumbaiRPC,
-      maxRetries: testnetMaxRetries,
-      rpcLength: testnetRPCLength
-    }
-    case 'amoy': return {
-      ethereumRPC: config.app.sepoliaRPC,
-      maticRPC: config.app.amoyRPC,
-      maxRetries: testnetAmoyMaxRetries,
-      rpcLength: testnetAmoyRPCLength
-    }
-    default: return {
-      ethereumRPC: config.app.ethereumRPC,
-      maticRPC: config.app.maticRPC,
-      maxRetries: mainnetMaxRetries,
-      rpcLength: mainnetRPCLength
-    }
-  }
-}
 
 /**
  * isBlockIncluded
  *
  * @param {String} blockNumber
  * @param {Boolean} isMainnet
- * @param {String} version
  * @returns {Object}
  */
-export async function isBlockIncluded(blockNumber, isMainnet, version) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version)
+export async function isBlockIncluded(blockNumber, isMainnet) {
+  const maticRPC = isMainnet ? config.app.maticRPC : config.app.mumbaiRPC
+  const ethereumRPC = isMainnet ? config.app.ethereumRPC : config.app.goerliRPC
+  const maxRetries = isMainnet ? mainnetMaxRetries : testnetMaxRetries
+  const rpcLength = isMainnet ? mainnetRPCLength : testnetRPCLength
   const initialRpcIndex = isMainnet
     ? config.mainnetRpcIndex
     : config.testnetRpcIndex
@@ -63,7 +34,6 @@ export async function isBlockIncluded(blockNumber, isMainnet, version) {
       // initialize matic client
       const rootChain = await initMatic(
         isMainnet,
-        version,
         maticRPC[rpcIndex],
         ethereumRPC[rpcIndex]
       ).then((maticClient) => {
@@ -117,11 +87,13 @@ export async function isBlockIncluded(blockNumber, isMainnet, version) {
  * @param {String} end
  * @param {String} number
  * @param {Boolean} isMainnet
- * @param {String} version
  * @returns {Object}
  */
-export async function fastMerkleProof(start, end, number, isMainnet, version) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version)
+export async function fastMerkleProof(start, end, number, isMainnet) {
+  const maticRPC = isMainnet ? config.app.maticRPC : config.app.mumbaiRPC
+  const ethereumRPC = isMainnet ? config.app.ethereumRPC : config.app.goerliRPC
+  const maxRetries = isMainnet ? mainnetMaxRetries : testnetMaxRetries
+  const rpcLength = isMainnet ? mainnetRPCLength : testnetRPCLength
   const initialRpcIndex = isMainnet
     ? config.mainnetRpcIndex
     : config.testnetRpcIndex
@@ -135,7 +107,6 @@ export async function fastMerkleProof(start, end, number, isMainnet, version) {
       // initialize matic client
       const maticClient = await initMatic(
         isMainnet,
-        version,
         maticRPC[rpcIndex],
         ethereumRPC[rpcIndex]
       )
@@ -159,17 +130,18 @@ export async function fastMerkleProof(start, end, number, isMainnet, version) {
  * @param {String} blockNumber
  * @param {String} eventSignature
  * @param {Boolean} isMainnet
- * @param {String} version
  * @returns {Object}
  */
 export async function generateExitPayload(
   burnTxHash,
   eventSignature,
   tokenIndex,
-  isMainnet,
-  version
+  isMainnet
 ) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version)
+  const maticRPC = isMainnet ? config.app.maticRPC : config.app.mumbaiRPC
+  const ethereumRPC = isMainnet ? config.app.ethereumRPC : config.app.goerliRPC
+  const maxRetries = isMainnet ? mainnetMaxRetries : testnetMaxRetries
+  const rpcLength = isMainnet ? mainnetRPCLength : testnetRPCLength
   const initialRpcIndex = isMainnet
     ? config.mainnetRpcIndex
     : config.testnetRpcIndex
@@ -187,7 +159,6 @@ export async function generateExitPayload(
       // initialize matic client
       const maticClient = await initMatic(
         isMainnet,
-        version,
         maticRPC[rpcIndex],
         ethereumRPC[rpcIndex]
       )
@@ -264,16 +235,17 @@ export async function generateExitPayload(
  * @param {String} blockNumber
  * @param {String} eventSignature
  * @param {Boolean} isMainnet
- * @param {String} version
  * @returns {Object}
  */
 export async function generateAllExitPayloads(
   burnTxHash,
   eventSignature,
-  isMainnet,
-  version
+  isMainnet
 ) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version)
+  const maticRPC = isMainnet ? config.app.maticRPC : config.app.mumbaiRPC
+  const ethereumRPC = isMainnet ? config.app.ethereumRPC : config.app.goerliRPC
+  const maxRetries = isMainnet ? mainnetMaxRetries : testnetMaxRetries
+  const rpcLength = isMainnet ? mainnetRPCLength : testnetRPCLength
   const initialRpcIndex = isMainnet
     ? config.mainnetRpcIndex
     : config.testnetRpcIndex
@@ -291,7 +263,6 @@ export async function generateAllExitPayloads(
       // initialize matic client
       const maticClient = await initMatic(
         isMainnet,
-        version,
         maticRPC[rpcIndex],
         ethereumRPC[rpcIndex]
       )

@@ -5,12 +5,13 @@ import { Web3ClientPlugin } from '@maticnetwork/maticjs-web3'
 use(Web3ClientPlugin)
 
 // get matic and maticPoS clients from maticjs
-async function initMatic(isMainnet, version, maticRPC, ethereumRPC) {
+async function initMatic(isMainnet, maticRPC, ethereumRPC) {
   const _network = isMainnet ? 'mainnet' : 'testnet'
+  const _version = isMainnet ? 'v1' : 'mumbai'
 
   const maticConfig = {
     network: _network,
-    version: version,
+    version: _version,
     parent: {
       provider: ethereumRPC,
       defaultConfig: {}
