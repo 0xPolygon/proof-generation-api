@@ -198,7 +198,7 @@ export async function generateExitPayload(
         isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash)
         logger.info(isCheckpointed)
       } catch (error) {
-        logger.error(error)
+        logger.info(error)
         if (i === maxRetries - 1) {
           throw new InfoError(
             errorTypes.IncorrectTx,
@@ -302,7 +302,7 @@ export async function generateAllExitPayloads(
         isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash)
         logger.info(isCheckpointed)
       } catch (error) {
-        logger.error(error)
+        logger.info(error)
         if (i === maxRetries - 1) {
           throw new InfoError(
             errorTypes.IncorrectTx,
