@@ -22,7 +22,7 @@ const logFormat = format.combine(
     format: 'YY-MM-DD HH:mm:ss'
   }),
   format.printf(
-    info => `${info.timestamp} - ${info.level} : ${info.message}`
+    (info) => `${info.timestamp} - ${info.level} : ${info.message}`
   )
 )
 
@@ -35,24 +35,22 @@ const logger = createLogger({
     logFormat
   ),
   defaultMeta: { service: 'user-service' },
-  transports: [
-    new Sentry(options)
-  ]
+  transports: [new Sentry(options)]
 })
 
 //
 // If we're not in production then log to the `console` with the format:
 // `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
 //
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(new transports.Console({
+logger.add(
+  new transports.Console({
     format: format.combine(
       format.json(),
       format.metadata(),
       format.errors({ stack: true }),
       logFormat
     )
-  }))
-}
+  })
+)
 
 export default logger
