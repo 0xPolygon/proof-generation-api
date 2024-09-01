@@ -223,7 +223,7 @@ export async function generateExitPayload(
           tokenIndex
         )
       } catch (error) {
-        logger.error(error)
+        logger.info(error)
         if (
           error.message ===
           'Index is grater than the number of tokens in this transaction'
@@ -341,7 +341,7 @@ export async function generateAllExitPayloads(
 
       break
     } catch (error) {
-      logger.error(error)
+      logger.info(error)
       if (
         error.type === errorTypes.TxNotCheckpointed ||
         error.type === errorTypes.IncorrectTx ||
