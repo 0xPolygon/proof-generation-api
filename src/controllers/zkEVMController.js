@@ -11,12 +11,7 @@ export default {
       const networkID = req.query.net_id
       const depositCount = req.query.deposit_cnt
       const network = req.params.network
-      const responseObj = await bridge(
-        networkID,
-        depositCount,
-        network
-      )
-      console.log(responseObj)
+      const responseObj = await bridge(networkID, depositCount, network)
       handleResponse({ res, data: responseObj })
     } catch (error) {
       if (error instanceof InfoError) {

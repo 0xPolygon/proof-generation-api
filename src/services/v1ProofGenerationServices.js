@@ -216,6 +216,7 @@ export async function generateExitPayload(
 
       // build payload for exit
       try {
+        logger.info(`Building exit payload for ${burnTxHash} and event sig ${eventSignature} at token index ${tokenIndex}`)
         result = await maticClient.exitUtil.buildPayloadForExit(
           burnTxHash,
           eventSignature,
@@ -223,7 +224,7 @@ export async function generateExitPayload(
           tokenIndex
         )
       } catch (error) {
-        logger.error(error)
+        logger.info(error)
         if (
           error.message ===
           'Index is grater than the number of tokens in this transaction'
@@ -320,6 +321,7 @@ export async function generateAllExitPayloads(
 
       // build payload for exit
       try {
+        logger.info(`Building all exit payloads for ${burnTxHash} and event sig ${eventSignature}`)
         result = await maticClient.exitUtil.buildMultiplePayloadsForExit(
           burnTxHash,
           eventSignature,
@@ -341,7 +343,7 @@ export async function generateAllExitPayloads(
 
       break
     } catch (error) {
-      logger.error(error)
+      logger.info(error)
       if (
         error.type === errorTypes.TxNotCheckpointed ||
         error.type === errorTypes.IncorrectTx ||
