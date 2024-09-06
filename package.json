@@ -23,7 +23,7 @@
     "author": "Rahul Prabhu <rahul.prabhu@polygon.technology>",
     "license": "ISC",
     "dependencies": {
-        "@maticnetwork/maticjs": "^3.7.7",
+        "@maticnetwork/maticjs": "^3.9.2",
         "@maticnetwork/maticjs-web3": "^1.0.2",
         "compression": "^1.7.4",
         "cors": "^2.8.5",
