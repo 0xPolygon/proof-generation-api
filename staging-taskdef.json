@@ -68,10 +68,6 @@
                     "name": "MATIC_RPC"
                 },
                 {
-                    "valueFrom": "arn:aws:ssm:eu-west-1:070528468658:parameter/proof-generator-staging/MUMBAI_RPC",
-                    "name": "MUMBAI_RPC"
-                },
-                {
                     "valueFrom": "arn:aws:ssm:eu-west-1:070528468658:parameter/proof-generator-staging/AMOY_RPC",
                     "name": "AMOY_RPC"
                 },
