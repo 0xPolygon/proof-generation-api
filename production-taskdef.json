@@ -57,20 +57,12 @@
                     "name": "ETHEREUM_RPC"
                 },
                 {
-                    "valueFrom": "arn:aws:ssm:eu-west-1:042947190491:parameter/proof-generator-api/GOERLI_RPC",
-                    "name": "GOERLI_RPC"
-                },
-                {
                     "valueFrom": "arn:aws:ssm:eu-west-1:042947190491:parameter/proof-generator-api/SEPOLIA_RPC",
                     "name": "SEPOLIA_RPC"
                 },
                 {
                     "valueFrom": "arn:aws:ssm:eu-west-1:042947190491:parameter/proof-generator-api/MATIC_RPC",
                     "name": "MATIC_RPC"
-                },
-                {
-                    "valueFrom": "arn:aws:ssm:eu-west-1:042947190491:parameter/proof-generator-api/MUMBAI_RPC",
-                    "name": "MUMBAI_RPC"
                 },
                 {
                     "valueFrom": "arn:aws:ssm:eu-west-1:042947190491:parameter/proof-generator-api/AMOY_RPC",
@@ -85,12 +77,8 @@
                     "name": "ZKEVM_MAINNET_URL"
                 },
                 {
-                    "valueFrom": "arn:aws:ssm:eu-west-1:042947190491:parameter/proof-generator-api/ZKEVM_TESTNET_URL",
-                    "name": "ZKEVM_TESTNET_URL"
-                },
-                {
                     "valueFrom": "arn:aws:ssm:eu-west-1:042947190491:parameter/proof-generator-api/ZKEVM_NEW_TESTNET_URL",
-                    "name": "ZKEVM_NEW_TESTNET_URL"
+                    "name": "ZKEVM_TESTNET_URL"
                 }
             ],
             "dockerSecurityOptions": null,
