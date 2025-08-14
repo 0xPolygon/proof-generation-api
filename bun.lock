@@ -4,7 +4,7 @@
     "": {
       "name": "proof-generation-api-bun",
       "dependencies": {
-        "@maticnetwork/maticjs": "^3.9.5",
+        "@maticnetwork/maticjs": "3.9.6",
         "@maticnetwork/maticjs-ethers": "^1.1.0",
         "@polygonlabs/servercore": "^1.0.0",
         "ethers": "^5.8.0",
@@ -160,7 +160,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.30", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-GQ7Nw5G2lTu/BtHTKfXhKHok2WGetd4XYcVKGx00SjAk8GMwgJM3zr6zORiPGuOE+/vkc90KtTosSSvaCjKb2Q=="],
 
-    "@maticnetwork/maticjs": ["@maticnetwork/maticjs@3.9.5", "", { "dependencies": { "@ethereumjs/block": "^5.2.0", "@ethereumjs/trie": "^6.2.0", "@ethereumjs/util": "^9.0.3", "assert": "^2.1.0", "bn.js": "^5.2.1", "buffer": "^6.0.3", "ethereum-cryptography": "^2.2.1", "node-fetch": "^2.6.1", "rlp": "^3.0.0", "stream": "^0.0.3" } }, "sha512-lIRAma4GJKVkup7HhVjwaJ+UrNab6736Gn7svg8ePoEM7280TnNhezfOAN3iacH43RwRpuGr0tbuKhbj+Y4brg=="],
+    "@maticnetwork/maticjs": ["@maticnetwork/maticjs@3.9.6", "", { "dependencies": { "@ethereumjs/block": "^5.2.0", "@ethereumjs/trie": "^6.2.0", "@ethereumjs/util": "^9.0.3", "assert": "^2.1.0", "bn.js": "^5.2.1", "buffer": "^6.0.3", "ethereum-cryptography": "^2.2.1", "node-fetch": "^2.6.1", "rlp": "^3.0.0", "stream": "^0.0.3" } }, "sha512-eTK8Aa+EyBdpX7OxuiSvUEXvnrDSXe+QvQgC6dP1eeSQO8ZYCBE+iI/LZbyldRlKcjZqZVDA6JnodjNBIuK+ww=="],
 
     "@maticnetwork/maticjs-ethers": ["@maticnetwork/maticjs-ethers@1.1.0", "", { "dependencies": { "ethers": "^5.5.1" }, "peerDependencies": { "@maticnetwork/maticjs": "^3.2.5" } }, "sha512-+6+GewlsW/CXI7WkBq9iL2C8/v2WwsK/M2X8czRW9uQEv5r2auL+46nai195bmXSxiYWBabiMqD/r5R7FfolSw=="],
 
