@@ -169,12 +169,18 @@ export async function generateExitPayload(
   let result
   let isCheckpointed
 
-  Logger.info(`max retries ${maxRetries}`)
+  Logger.info({
+    location: 'v1ProofGenerationServices.generateExitPayload',
+    data: `max retries ${maxRetries}`
+  })
 
   // loop over rpcs to retry in case of an in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength
-    Logger.info(`rpcIndex ${rpcIndex}`)
+    Logger.info({
+      location: 'v1ProofGenerationServices.generateExitPayload',
+      data: `rpcIndex ${rpcIndex}`
+    })
     try {
       // initialize matic client
       const maticClient = await initMatic(
@@ -185,26 +191,41 @@ export async function generateExitPayload(
       )
 
       // check for checkpoint
-      try {
-        Logger.info(`Checking for checkpoint status ${burnTxHash}`)
-        isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash)
-        Logger.info({ 'isCheckpointed': isCheckpointed })
-      } catch (error) {
-        Logger.info({ error })
-        if (i === maxRetries - 1) {
+      if (!isCheckpointed) {
+        try {
+          Logger.info({
+            location: 'v1ProofGenerationServices.generateExitPayload',
+            call: 'Checking for checkpoint status',
+            burnTxHash
+          })
+          isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash)
+
+        } catch (error) {
+          Logger.info({
+            location: 'v1ProofGenerationServices.generateExitPayload',
+            call: 'Checking for checkpoint status failed',
+            error
+          })
+          if (i === maxRetries - 1) {
+            throw new InfoError(
+              errorTypes.IncorrectTx,
+              'Incorrect burn transaction'
+            )
+          }
+          throw new Error('Null receipt received')
+        }
+        if (!isCheckpointed) {
           throw new InfoError(
-            errorTypes.IncorrectTx,
-            'Incorrect burn transaction'
+            errorTypes.TxNotCheckpointed,
+            'Burn transaction has not been checkpointed yet'
           )
         }
-        throw new Error('Null receipt received')
       }
-      if (!isCheckpointed) {
-        throw new InfoError(
-          errorTypes.TxNotCheckpointed,
-          'Burn transaction has not been checkpointed yet'
-        )
-      }
+      Logger.info({
+        location: 'v1ProofGenerationServices.generateExitPayload',
+        call: 'checkpoint status',
+        isCheckpointed
+      })
 
       // build payload for exit
       try {
@@ -218,7 +239,7 @@ export async function generateExitPayload(
         Logger.error({ error })
         if (
           error.message ===
-          'Index is grater than the number of tokens in this transaction'
+          'Index is greater than the number of tokens in this transaction'
         ) {
           throw new InfoError(errorTypes.BlockNotIncluded, error.message)
         }

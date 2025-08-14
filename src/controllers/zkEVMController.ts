@@ -18,11 +18,10 @@ export const callBridge = async (c: Context) => {
     return handleResponse({ c, data: responseObj });
   } catch (error) {
     if (error instanceof InfoError) {
-      handleError({ c, statusCode: 404, err: error })
-    } else {
-      Logger.error({ message: 'error in bridge controller', error })
-      handleError({ c })
+      return handleError({ c, statusCode: 404, err: error })
     }
+    Logger.error({ message: 'error in bridge controller', error })
+    return handleError({ c })
   }
 }
 
@@ -38,10 +37,9 @@ export const callMerkelProofGenerator = async (c: Context) => {
     return handleResponse({ c, data: responseObj });
   } catch (error) {
     if (error instanceof InfoError) {
-      handleError({ c, statusCode: 404, err: error })
-    } else {
-      Logger.error({ message: 'error in merkelProofGenerator controller', error })
-      handleError({ c })
+      return handleError({ c, statusCode: 404, err: error })
     }
+    Logger.error({ message: 'error in merkelProofGenerator controller', error })
+    return handleError({ c })
   }
 }

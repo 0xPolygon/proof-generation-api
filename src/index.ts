@@ -1,4 +1,3 @@
-import config from './config'
 import { Logger } from "@polygonlabs/servercore";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -33,5 +32,6 @@ serve();
 
 export default {
     port: process.env.PORT || 3000,
+    idleTimeout: 120,
     fetch: app.fetch,
 };
