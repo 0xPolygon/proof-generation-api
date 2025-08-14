@@ -24,11 +24,10 @@ export const callIsBlockIncluded = async (c: Context) => {
     return handleResponse({ c, data: responseObj });
   } catch (error) {
     if (error instanceof InfoError) {
-      handleError({ c, statusCode: 404, err: error })
-    } else {
-      Logger.error({ message: 'error in isBlockIncluded controller', error })
-      handleError({ c })
-    }
+      return handleError({ c, statusCode: 404, err: error })
+    } 
+    Logger.error({ message: 'error in isBlockIncluded controller', error })
+    return handleError({ c })
   }
 }
 
@@ -50,17 +49,15 @@ export const callFastMerkleProof = async (c: Context) => {
     return handleResponse({ c, data: responseObj });
   } catch (error) {
     if (error instanceof InfoError) {
-      handleError({ c, statusCode: 404, err: error })
-    } else {
-      Logger.error({ message: 'error in fastMerkleProof controller', error })
-      handleError({ c })
+      return handleError({ c, statusCode: 404, err: error })
     }
+    Logger.error({ message: 'error in fastMerkleProof controller', error })
+    return handleError({ c })
   }
 }
 
 export const callExitPayload = async (c: Context) => {
   try {
-    console.log("aaa")
     const { burnTxHash, eventSignature } = c.get("validatedExitPayloadParams");
     const { network } = c.get("validatedV1NetworkParams");
 
@@ -78,11 +75,10 @@ export const callExitPayload = async (c: Context) => {
     return handleResponse({ c, data: responseObj });
   } catch (error) {
     if (error instanceof InfoError) {
-      handleError({ c, statusCode: 404, err: error })
-    } else {
-      Logger.error({ message: 'error in callExitPayload controller', error })
-      handleError({ c })
+      return handleError({ c, statusCode: 404, err: error })
     }
+    Logger.error({ message: 'error in callExitPayload controller', error })
+    return handleError({ c })
   }
 }
 
@@ -104,10 +100,9 @@ export const callAllExitPayloads = async (c: Context) => {
     return handleResponse({ c, data: responseObj });
   } catch (error) {
     if (error instanceof InfoError) {
-      handleError({ c, statusCode: 404, err: error })
-    } else {
-      Logger.error({ message: 'error in allExitPayloads controller', error })
-      handleError({ c })
+      return handleError({ c, statusCode: 404, err: error })
     }
+    Logger.error({ message: 'error in allExitPayloads controller', error })
+    return handleError({ c })
   }
 }
