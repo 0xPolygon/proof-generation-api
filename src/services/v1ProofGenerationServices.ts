@@ -236,7 +236,7 @@ export async function generateExitPayload(
           tokenIndex
         )
       } catch (error: any) {
-        Logger.error({ error })
+        Logger.info({ location: 'v1ProofGenerationServices.generateExitPayload', call: 'catch error', error })
         if (
           error.message ===
           'Index is greater than the number of tokens in this transaction'
