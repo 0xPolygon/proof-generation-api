@@ -123,12 +123,14 @@ export default {
         })
       }
 
-      // burn tx hash and event signature starts with 0x and their lengths must be equal to 66
+      // burn tx hash and event signature must be strings, start with 0x, and have length 66
       if (
+        typeof burnTxHash !== 'string' ||
+        typeof eventSignature !== 'string' ||
         !burnTxHash.startsWith('0x') ||
-                !eventSignature.startsWith('0x') ||
-                burnTxHash.length !== 66 ||
-                eventSignature.length !== 66
+        !eventSignature.startsWith('0x') ||
+        burnTxHash.length !== 66 ||
+        eventSignature.length !== 66
       ) {
         return handleBadRequest({
           res,
