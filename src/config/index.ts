@@ -8,7 +8,8 @@ export default {
     maticRPC: JSON.parse(process.env.MATIC_RPC || '[]'),
     amoyRPC: JSON.parse(process.env.AMOY_RPC || '[]'),
     zkEVMMainnetURL: process.env.ZKEVM_MAINNET_URL,
-    zkEVMTestnetURL: process.env.ZKEVM_TESTNET_URL
+    zkEVMTestnetURL: process.env.ZKEVM_TESTNET_URL,
+    xERPCSecretToken: process.env.ERPC_SECRET_TOKEN
   },
   debug: debug,
   mainnetRpcIndex: 0,

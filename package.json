@@ -19,7 +19,7 @@
     "@maticnetwork/maticjs": "3.9.6",
     "@maticnetwork/maticjs-ethers": "^1.1.0",
     "@polygonlabs/servercore": "^1.0.0",
-    "ethers": "^5.8.0",
+    "ethers": "5.5.1",
     "hono": "^4.9.0",
     "tsup": "^8.5.0"
   }
