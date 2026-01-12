@@ -97,6 +97,7 @@ export async function isBlockIncluded(blockNumber: string, isMainnet: boolean, v
       if (error.type === errorTypes.BlockNotIncluded || i === maxRetries - 1) {
         throw error
       }
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
   return result
@@ -140,6 +141,7 @@ export async function fastMerkleProof(start: string, end: string, number: number
       if (i === maxRetries - 1) {
         throw error
       }
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
   return { proof }
@@ -266,6 +268,7 @@ export async function generateExitPayload(
       ) {
         throw error
       }
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
   return { message: 'Payload generation success', result }
@@ -363,6 +366,7 @@ export async function generateAllExitPayloads(
       ) {
         throw error
       }
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
   return { message: 'Payload generation success', result }
