@@ -1,2 +1,6 @@
-const wrappedRequire = require('esm')(module /*, options */)
-module.exports = wrappedRequire('./main.js')
+import { startServer } from './express.js';
+import * as config from './config/globals.js';
+
+const port = config.app.port;
+
+startServer(port);

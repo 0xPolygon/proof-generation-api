@@ -1,10 +1,10 @@
-import compression from 'compression'
-import cors from 'cors'
-import helmet from 'helmet'
+import compression from 'compression';
+import cors from 'cors';
+import helmet from 'helmet';
 
-import { json } from 'express'
+import { json } from 'express';
 
-import config from '../config/globals'
+import * as config from '../config/globals.js';
 
 /**
  * Init Express middleware
@@ -13,17 +13,17 @@ import config from '../config/globals'
  * @returns {void}
  */
 export function registerMiddleware(router) {
-  router.use(helmet())
+  router.use(helmet());
 
   if (config.debug !== 'production') {
-    router.use(cors({ origin: '*' }))
+    router.use(cors({ origin: '*' }));
   } else {
-    router.use(cors({ origin: [`http://localhost:${config.app.port}`] }))
+    router.use(cors({ origin: [`http://localhost:${config.app.port}`] }));
   }
 
-  router.use(json())
-  router.use(compression())
+  router.use(json());
+  router.use(compression());
 }
 
-export { default as validateParams } from './validateParams'
-export { verifyMerkleProof } from './validateResults'
+export * as validateParams from './validateParams.js';
+export { verifyMerkleProof } from './validateResults.js';

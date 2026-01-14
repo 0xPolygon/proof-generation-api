@@ -1,14 +1,14 @@
-import express from 'express'
-import { validateParams } from '../middleware'
-import { zkEVMController } from '../controllers'
+import express from 'express';
+import { validateParams } from '../middleware/index.js';
+import { zkEVMController } from '../controllers/index.js';
 
 const router = express.Router({
-  mergeParams: true
-})
+  mergeParams: true,
+});
 
 /**
  * @swagger
- * /{network}/bridge/ :
+ * /zkevm/{network}/bridge/ :
  *  get:
  *    summary: Check the bridge details using deposit count and network
  *    tags:
@@ -41,11 +41,11 @@ router.get(
   validateParams.validateZkEVMParams,
   validateParams.validateZkEVMNetworkParam,
   zkEVMController.bridge
-)
+);
 
 /**
  * @swagger
- * /{network}/merkle-proof :
+ * /zkevm/{network}/merkle-proof :
  *  get:
  *    summary: Returns the merkle proof.
  *    tags:
@@ -76,6 +76,6 @@ router.get(
   validateParams.validateZkEVMParams,
   validateParams.validateZkEVMNetworkParam,
   zkEVMController.merkelProofGenerator
-)
+);
 
-export default router
+export const zkEVMRoutes = router;

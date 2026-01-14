@@ -1,14 +1,14 @@
-import express from 'express'
-import { validateParams } from '../middleware'
-import { v1Controller } from '../controllers'
+import express from 'express';
+import { validateParams } from '../middleware/index.js';
+import { v1Controller } from '../controllers/index.js';
 
 const router = express.Router({
-  mergeParams: true
-})
+  mergeParams: true,
+});
 
 /**
  * @swagger
- * /{network}/block-included/{blockNumber} :
+ * /v1/{network}/block-included/{blockNumber} :
  *  get:
  *    summary: Check if a block is checkpointed.
  *    description: Checks if a block on Polygon Mainnet has been checkpointed to the Ethereum Mainnet by the validators. Also this endpoint returns details of the checkpoint in which the block has been included.
@@ -38,11 +38,11 @@ router.get(
   validateParams.validateBlockIncludedParams,
   validateParams.validateV1NetworkParam,
   v1Controller.isBlockIncluded
-)
+);
 
 /**
  * @swagger
- * /{network}/fast-merkle-proof :
+ * /v1/{network}/fast-merkle-proof :
  *  get:
  *    summary: Returns the fast merkle block proof.
  *    description: Returns the block proof by making use of an optimised logic that gets the block details with minimum possible RPC calls to the Polygon Mainnet. This block proof can be further used to create the final payload that has to be used to complete the exit/proof submission step on the Ethereum mainnet.
@@ -78,11 +78,11 @@ router.get(
   validateParams.validateFastMerkleProofParams,
   validateParams.validateV1NetworkParam,
   v1Controller.fastMerkleProof
-)
+);
 
 /**
  * @swagger
- * /{network}/exit-payload/{burnTxHash} :
+ * /v1/{network}/exit-payload/{burnTxHash} :
  *  get:
  *    summary : Returns the payload to complete the exit/proof submission.
  *    description: Returns the input payload that has to be passed to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
@@ -120,11 +120,11 @@ router.get(
   validateParams.validateExitPayloadParams,
   validateParams.validateV1NetworkParam,
   v1Controller.exitPayload
-)
+);
 
 /**
  * @swagger
- * /{network}/all-exit-payload/{burnTxHash} :
+ * /v1/{network}/all-exit-payload/{burnTxHash} :
  *  get:
  *    summary : Returns an array of payloads of all tokens in a particular burnTx to complete the exit/proof submission.
  *    description: Returns the input payloads that has to be passed individually to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
@@ -158,6 +158,6 @@ router.get(
   validateParams.validateExitPayloadParams,
   validateParams.validateV1NetworkParam,
   v1Controller.allExitPayloads
-)
+);
 
-export default router
+export const v1Routes = router;
