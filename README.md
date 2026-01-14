@@ -43,7 +43,7 @@ $ npm run test
 
 ## API Endpoints
 
-The following endpoints with the exception of "list all" and "healthcheck" are written for Polygon Mainnet. **In order to query the Mumbai Testnet, replace 'matic' in the endpoint path to 'mumbai'.**
+The following endpoints with the exception of "list all" and "healthcheck" are written for Polygon Mainnet. **In order to query the Amoy Testnet, replace 'matic' in the endpoint path to 'amoy'.**
 
 - Response Statuses:
   - '200': A successful response

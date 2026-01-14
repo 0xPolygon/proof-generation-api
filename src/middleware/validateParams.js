@@ -3,15 +3,17 @@
 import { handleBadRequest, handleError } from '../helpers/responseHandlers.js';
 import { logger } from '../config/logger.js';
 
+const SUPPORTED_V1_NETWORKS = ['matic', 'amoy'];
+const SUPPORTED_ZK_NETWORKS = ['mainnet', 'testnet', 'cherry', 'blueberry', 'cardona'];
+
 // network params validation for PoS v1
 export const validateV1NetworkParam = (req, res, next) => {
   const network = req.params.network;
   try {
-    // network can either be matic or mumbai
-    if (network !== 'matic' && network !== 'mumbai' && network !== 'amoy') {
+    if (!SUPPORTED_V1_NETWORKS.includes(network)) {
       return handleBadRequest({
         res,
-        errMsg: `Invalid network ${network}. Network can either be matic, mumbai or amoy for PoS v1 routes`,
+        errMsg: `Invalid network ${network}. Network can either be ${SUPPORTED_V1_NETWORKS.join(' or ')} for PoS v1 routes`,
       });
     }
     next();
@@ -28,17 +30,10 @@ export const validateV1NetworkParam = (req, res, next) => {
 export const validateZkEVMNetworkParam = (req, res, next) => {
   const network = req.params.network;
   try {
-    // network can either be matic or mumbai
-    if (
-      network !== 'mainnet' &&
-      network !== 'testnet' &&
-      network !== 'cherry' &&
-      network !== 'blueberry' &&
-      network !== 'cardona'
-    ) {
+    if (!SUPPORTED_ZK_NETWORKS.includes(network)) {
       return handleBadRequest({
         res,
-        errMsg: `Invalid network ${network}. Network can either be mainnet or testnet or version including blueberry, cherry or cardona for zkEVM routes`,
+        errMsg: `Invalid network ${network}. Network can either be ${SUPPORTED_ZK_NETWORKS.join(' or ')} for zkEVM routes`,
       });
     }
     next();

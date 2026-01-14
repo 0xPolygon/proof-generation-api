@@ -6,8 +6,6 @@ import { logger } from '../config/logger.js';
 
 const mainnetRPCLength = config.app.maticRPC.length; // total mainnet rpcs
 const mainnetMaxRetries = 2 * mainnetRPCLength; // max mainnet retries
-const testnetRPCLength = config.app.mumbaiRPC.length; // total testnet rpcs
-const testnetMaxRetries = 2 * testnetRPCLength; // max testnet retries
 const testnetAmoyRPCLength = config.app.amoyRPC.length; // total amoy testnet rpcs
 const testnetAmoyMaxRetries = 2 * testnetAmoyRPCLength; // max amoy testnet retries
 
@@ -19,13 +17,6 @@ function getVersionDetails(version) {
         maticRPC: config.app.maticRPC,
         maxRetries: mainnetMaxRetries,
         rpcLength: mainnetRPCLength,
-      };
-    case 'mumbai':
-      return {
-        ethereumRPC: config.app.goerliRPC,
-        maticRPC: config.app.mumbaiRPC,
-        maxRetries: testnetMaxRetries,
-        rpcLength: testnetRPCLength,
       };
     case 'amoy':
       return {
