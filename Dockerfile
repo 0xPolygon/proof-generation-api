@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim
+FROM node:20-bookworm-slim@sha256:b342de02eb4a57cd6986290a69833d20818508db8078dba0197a024193410aee
 WORKDIR /app
 RUN apt-get update || : && apt-get install -y \
     python3 \
