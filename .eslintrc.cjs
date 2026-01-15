@@ -1,9 +1,10 @@
 module.exports = {
   extends: 'standard',
   rules: {
-    'space-before-function-paren': ['error', 'never'],
-    'no-underscore-dangle': 0,
-    semi: ['error', 'never'],
+    'space-before-function-paren': ['off'],
+    'no-underscore-dangle': ['off'],
+    semi: ['error', 'always'],
+    'comma-dangle': ['off'],
   },
   overrides: [
     {

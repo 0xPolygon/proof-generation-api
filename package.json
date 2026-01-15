@@ -8,8 +8,8 @@
   "scripts": {
     "dev": "node src/index.js",
     "start": "node src/index.js",
-    "lint": "eslint src/*.js src/**/*.js",
-    "lint:fix": "eslint --fix src/*.js src/**/*.js test/*.js",
+    "lint": "eslint src/*.js src/**/*.js test/*.js test/**/*.js",
+    "lint:fix": "eslint --fix src/*.js src/**/*.js test/*.js test/**/*.js ",
     "format": "prettier --write 'src/**/*.js'",
     "test": "mocha"
   },
