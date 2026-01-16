@@ -1,6 +1,6 @@
 import type { MiddlewareHandler } from 'hono';
 
-import { handleBadRequest } from '../helpers/responseHandlers';
+import { handleBadRequest } from '../helpers/responseHandlers.ts';
 
 export const validateV1NetworkParam: MiddlewareHandler = async (
   context,
@@ -17,7 +17,8 @@ export const validateV1NetworkParam: MiddlewareHandler = async (
   context.set('validatedV1NetworkParams', {
     network,
   });
-  await next();
+
+  return await next();
 };
 
 export const validateZkEVMNetworkParam: MiddlewareHandler = async (
@@ -37,10 +38,11 @@ export const validateZkEVMNetworkParam: MiddlewareHandler = async (
       errMsg: `Invalid network ${network}. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes`,
     });
   }
+
   context.set('validatedZkevmNetworkParams', {
     network,
   });
-  await next();
+  return await next();
 };
 
 export const validateBlockIncludedParams: MiddlewareHandler = async (
@@ -59,7 +61,7 @@ export const validateBlockIncludedParams: MiddlewareHandler = async (
   context.set('validatedBlockIncludedParams', {
     blockNumber: parseInt(blockNumber, 10),
   });
-  await next();
+  return await next();
 };
 
 export const validateFastMerkleProofParams: MiddlewareHandler = async (
@@ -101,7 +103,7 @@ export const validateFastMerkleProofParams: MiddlewareHandler = async (
     number,
   });
 
-  await next();
+  return await next();
 };
 
 export const validateExitPayloadParams: MiddlewareHandler = async (
@@ -135,7 +137,7 @@ export const validateExitPayloadParams: MiddlewareHandler = async (
     eventSignature,
   });
 
-  await next();
+  return await next();
 };
 
 export const validateZkEVMParams: MiddlewareHandler = async (context, next) => {
@@ -158,15 +160,11 @@ export const validateZkEVMParams: MiddlewareHandler = async (context, next) => {
     networkID: parseInt(networkID, 10),
     depositCount: parseInt(depositCount, 10),
   });
-  await next();
+
+  return await next();
 };
 
 const isInteger = (str: string): boolean => {
-  str = str.trim();
-  if (!str) {
-    return false;
-  }
-  str = str.replace(/^0+/, '') || '0';
-  const n = Math.floor(Number(str));
-  return n !== Infinity && String(n) === str && n >= 0;
+  const trimmed = str.trim();
+  return /^\d+$/.test(trimmed);
 };

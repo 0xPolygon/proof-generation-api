@@ -4,9 +4,9 @@ import type { Context } from 'hono';
 
 import { Logger } from '@polygonlabs/servercore';
 
-import { InfoError } from '../helpers/errorHelper';
-import { handleError, handleResponse } from '../helpers/responseHandlers';
-import { bridge, merkelProofGenerator } from '../services';
+import { InfoError } from '../helpers/errorHelper.ts';
+import { handleError, handleResponse } from '../helpers/responseHandlers.ts';
+import { bridge, merkelProofGenerator } from '../services/index.ts';
 
 export const callBridge = async (c: Context) => {
   try {

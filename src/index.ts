@@ -1,21 +1,28 @@
-import { Logger } from '@polygonlabs/servercore';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-import indexRoutes from './routes';
+import { Logger } from '@polygonlabs/servercore';
+
+import { env } from './env.ts';
+import indexRoutes from './routes/index.ts';
 
 const app = new Hono();
 
 async function serve(): Promise<void> {
-  Logger.create({
-    sentry: {
-      dsn: process.env.SENTRY_DSN,
-      level: 'error',
-    },
+  const loggerConfig: any = {
     console: {
       level: 'debug',
     },
-  });
+  };
+
+  if (env.SENTRY_DSN) {
+    loggerConfig.sentry = {
+      dsn: env.SENTRY_DSN,
+      level: 'error',
+    };
+  }
+
+  Logger.create(loggerConfig);
 
   // Middlewares
   // app.use("*", logger()); // Logs all requests
@@ -29,10 +36,10 @@ async function serve(): Promise<void> {
   });
 }
 
-serve();
+void serve();
 
 export default {
-  port: process.env.PORT || 3000,
+  port: env.PORT,
   idleTimeout: 120,
   fetch: app.fetch,
 };

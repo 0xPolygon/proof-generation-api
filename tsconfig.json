@@ -37,7 +37,10 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+
+    // This is a TS native service :tada:
+    "allowImportingTsExtensions": true
   },
   "exclude": ["node_modules", "dist"]
 }

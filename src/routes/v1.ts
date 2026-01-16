@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 
-import { v1Controller } from '../controllers';
-import { validateParams } from '../middleware';
+import { v1Controller } from '../controllers/index.ts';
+import { validateParams } from '../middleware/index.ts';
 
 const router = new Hono();
 

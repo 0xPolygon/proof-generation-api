@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 
-import v1Route from './v1';
-import zkEVMRoute from './zkEVM';
+import v1Route from './v1.ts';
+import zkEVMRoute from './zkEVM.ts';
 
 const router = new Hono();
 

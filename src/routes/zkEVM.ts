@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 
-import { zkEVMController } from '../controllers';
-import { validateParams } from '../middleware';
+import { zkEVMController } from '../controllers/index.ts';
+import { validateParams } from '../middleware/index.ts';
 
 const router = new Hono();
 

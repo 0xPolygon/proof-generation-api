@@ -4,15 +4,15 @@ import type { Context } from 'hono';
 
 import { Logger } from '@polygonlabs/servercore';
 
-import { InfoError } from '../helpers/errorHelper';
-import { handleError, handleResponse } from '../helpers/responseHandlers';
-import { verifyMerkleProof } from '../middleware';
+import { InfoError } from '../helpers/errorHelper.ts';
+import { handleError, handleResponse } from '../helpers/responseHandlers.ts';
+import { verifyMerkleProof } from '../middleware/index.ts';
 import {
   isBlockIncluded,
   fastMerkleProof,
   generateExitPayload,
   generateAllExitPayloads,
-} from '../services';
+} from '../services/index.ts';
 
 export const callIsBlockIncluded = async (c: Context) => {
   try {

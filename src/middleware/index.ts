@@ -1,2 +1,2 @@
-export * as validateParams from './validateParams';
-export { verifyMerkleProof } from './validateResults';
+export * as validateParams from './validateParams.ts';
+export { verifyMerkleProof } from './validateResults.ts';

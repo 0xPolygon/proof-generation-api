@@ -1,8 +1,8 @@
 import { Logger } from '@polygonlabs/servercore';
 
-import config from '../config';
-import errorTypes from '../config/errorTypes';
-import { InfoError } from '../helpers/errorHelper';
+import config from '../config.ts';
+import errorTypes from '../constants.ts';
+import { InfoError } from '../helpers/errorHelper.ts';
 
 function getBridgeAPIUrl(network: string) {
   switch (network) {

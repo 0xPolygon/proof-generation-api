@@ -3,5 +3,8 @@ export {
   fastMerkleProof,
   generateExitPayload,
   generateAllExitPayloads,
-} from './v1ProofGenerationServices';
-export { bridge, merkelProofGenerator } from './zkEVMProofGenerationServices';
+} from './v1ProofGenerationServices.ts';
+export {
+  bridge,
+  merkelProofGenerator,
+} from './zkEVMProofGenerationServices.ts';

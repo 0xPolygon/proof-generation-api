@@ -1,9 +1,9 @@
 import { Logger } from '@polygonlabs/servercore';
 
-import config from '../config';
-import errorTypes from '../config/errorTypes';
-import { InfoError } from '../helpers/errorHelper';
-import { initMatic, convert } from '../helpers/maticClient';
+import config from '../config.ts';
+import errorTypes from '../constants.ts';
+import { InfoError } from '../helpers/errorHelper.ts';
+import { initMatic, convert } from '../helpers/maticClient.ts';
 
 const mainnetRPCLength = config.app.maticRPC.length; // total mainnet rpcs
 const mainnetMaxRetries = 2 * mainnetRPCLength; // max mainnet retries
@@ -60,14 +60,21 @@ export async function isBlockIncluded(
   // loop over rpcs to retry in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
+    const maticRPCUrl = maticRPC[rpcIndex];
+    const ethereumRPCUrl = ethereumRPC[rpcIndex];
+
+    if (!maticRPCUrl || !ethereumRPCUrl) {
+      continue;
+    }
+
     try {
       // initialize matic client
       const rootChain = await initMatic(
         isMainnet,
         version,
-        maticRPC[rpcIndex],
-        ethereumRPC[rpcIndex],
-      ).then((maticClient) => {
+        maticRPCUrl,
+        ethereumRPCUrl,
+      ).then((maticClient: any) => {
         return maticClient.exitUtil.rootChain;
       });
 
@@ -77,14 +84,14 @@ export async function isBlockIncluded(
         // fetch header block information
         const headerBlockNumber = await rootChain
           .findRootBlockFromChild(blockNumber)
-          .then((result) => {
-            return convert(result);
+          .then((res: any) => {
+            return convert(res);
           });
 
         const headerBlock: any = await rootChain
           .method('headerBlocks', headerBlockNumber)
-          .then((method) => {
-            return method.read();
+          .then((meth: any) => {
+            return meth.read();
           });
 
         result = {
@@ -140,13 +147,20 @@ export async function fastMerkleProof(
   // loop over rpcs to retry in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
+    const maticRPCUrl = maticRPC[rpcIndex];
+    const ethereumRPCUrl = ethereumRPC[rpcIndex];
+
+    if (!maticRPCUrl || !ethereumRPCUrl) {
+      continue;
+    }
+
     try {
       // initialize matic client
       const maticClient = await initMatic(
         isMainnet,
         version,
-        maticRPC[rpcIndex],
-        ethereumRPC[rpcIndex],
+        maticRPCUrl,
+        ethereumRPCUrl,
       );
 
       // get merkle proof
@@ -196,6 +210,13 @@ export async function generateExitPayload(
   // loop over rpcs to retry in case of an in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
+    const maticRPCUrl = maticRPC[rpcIndex];
+    const ethereumRPCUrl = ethereumRPC[rpcIndex];
+
+    if (!maticRPCUrl || !ethereumRPCUrl) {
+      continue;
+    }
+
     Logger.info({
       location: 'v1ProofGenerationServices.generateExitPayload',
       data: `rpcIndex ${rpcIndex}`,
@@ -205,8 +226,8 @@ export async function generateExitPayload(
       const maticClient = await initMatic(
         isMainnet,
         version,
-        maticRPC[rpcIndex],
-        ethereumRPC[rpcIndex],
+        maticRPCUrl,
+        ethereumRPCUrl,
       );
 
       // check for checkpoint
@@ -324,14 +345,20 @@ export async function generateAllExitPayloads(
   // loop over rpcs to retry in case of an in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
-    Logger.info(`rpcIndex ${rpcIndex}`);
+    const maticRPCUrl = maticRPC[rpcIndex];
+    const ethereumRPCUrl = ethereumRPC[rpcIndex];
+
+    if (!maticRPCUrl || !ethereumRPCUrl) {
+      continue;
+    }
+
     try {
       // initialize matic client
       const maticClient = await initMatic(
         isMainnet,
         version,
-        maticRPC[rpcIndex],
-        ethereumRPC[rpcIndex],
+        maticRPCUrl,
+        ethereumRPCUrl,
       );
 
       // check for checkpoint
@@ -363,7 +390,8 @@ export async function generateAllExitPayloads(
           eventSignature,
           false,
         );
-      } catch (error) {
+        // FIXME: error is not logged?!
+      } catch {
         if (i === maxRetries - 1) {
           throw new InfoError(
             errorTypes.BlockNotIncluded,
