@@ -1,8 +1,9 @@
-import { Logger } from '@polygonlabs/servercore';
-
 import { config } from '../config.ts';
 import { errorTypes } from '../constants.ts';
 import { InfoError } from '../helpers/errorHelper.ts';
+import { getLogger } from '../logger.ts';
+
+const logger = getLogger();
 
 function getBridgeAPIUrl(network: string) {
   switch (network) {
@@ -37,7 +38,7 @@ export async function bridge(
   const data: any = await response.json();
 
   if (response.status !== 200) {
-    Logger.info(
+    logger.info(
       `Error hitting ${zkEVMURL} bridge with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(data)}`,
     );
     throw new InfoError(errorTypes.ZKEVMError, data.message);
@@ -65,7 +66,7 @@ export async function merkelProofGenerator(
   const data: any = await response.json();
 
   if (response.status !== 200) {
-    Logger.info(
+    logger.info(
       `Error hitting ${zkEVMURL} merkle proof with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(data)}`,
     );
     throw new InfoError(errorTypes.ZKEVMError, data.message);

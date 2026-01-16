@@ -1,9 +1,10 @@
-import { Logger } from '@polygonlabs/servercore';
-
 import { config } from '../config.ts';
 import { errorTypes } from '../constants.ts';
 import { InfoError } from '../helpers/errorHelper.ts';
 import { initMatic, convert } from '../helpers/maticClient.ts';
+import { getLogger } from '../logger.ts';
+
+const logger = getLogger();
 
 const mainnetRPCLength = config.app.maticRPC.length; // total mainnet rpcs
 const mainnetMaxRetries = 2 * mainnetRPCLength; // max mainnet retries
@@ -202,7 +203,7 @@ export async function generateExitPayload(
   let result;
   let isCheckpointed;
 
-  Logger.info({
+  logger.info({
     location: 'v1ProofGenerationServices.generateExitPayload',
     data: `max retries ${maxRetries}`,
   });
@@ -217,7 +218,7 @@ export async function generateExitPayload(
       continue;
     }
 
-    Logger.info({
+    logger.info({
       location: 'v1ProofGenerationServices.generateExitPayload',
       data: `rpcIndex ${rpcIndex}`,
     });
@@ -233,7 +234,7 @@ export async function generateExitPayload(
       // check for checkpoint
       if (!isCheckpointed) {
         try {
-          Logger.info({
+          logger.info({
             location: 'v1ProofGenerationServices.generateExitPayload',
             call: 'Checking for checkpoint status',
             burnTxHash,
@@ -241,7 +242,7 @@ export async function generateExitPayload(
           isCheckpointed =
             await maticClient.exitUtil.isCheckPointed(burnTxHash);
         } catch (error) {
-          Logger.info({
+          logger.info({
             location: 'v1ProofGenerationServices.generateExitPayload',
             call: 'Checking for checkpoint status failed',
             error,
@@ -261,7 +262,7 @@ export async function generateExitPayload(
           );
         }
       }
-      Logger.info({
+      logger.info({
         location: 'v1ProofGenerationServices.generateExitPayload',
         call: 'checkpoint status',
         isCheckpointed,
@@ -276,7 +277,7 @@ export async function generateExitPayload(
           tokenIndex,
         );
       } catch (error: any) {
-        Logger.info({
+        logger.info({
           location: 'v1ProofGenerationServices.generateExitPayload',
           call: 'catch error',
           error,
@@ -340,7 +341,7 @@ export async function generateAllExitPayloads(
   let result;
   let isCheckpointed;
 
-  Logger.info(`max retries ${maxRetries}, ${ethereumRPC}`);
+  logger.info(`max retries ${maxRetries}, ${ethereumRPC}`);
 
   // loop over rpcs to retry in case of an in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
@@ -363,11 +364,11 @@ export async function generateAllExitPayloads(
 
       // check for checkpoint
       try {
-        Logger.info(`Checking for checkpoint status ${burnTxHash}`);
+        logger.info(`Checking for checkpoint status ${burnTxHash}`);
         isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
-        Logger.info({ isCheckpointed: isCheckpointed });
+        logger.info({ isCheckpointed: isCheckpointed });
       } catch (error) {
-        Logger.info({ error });
+        logger.info({ error });
         if (i === maxRetries - 1) {
           throw new InfoError(
             errorTypes.IncorrectTx,
@@ -407,7 +408,7 @@ export async function generateAllExitPayloads(
 
       break;
     } catch (error: any) {
-      Logger.error({ error });
+      logger.error({ error });
       if (
         error.type === errorTypes.TxNotCheckpointed ||
         error.type === errorTypes.IncorrectTx ||

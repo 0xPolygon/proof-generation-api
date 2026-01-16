@@ -2,18 +2,18 @@ import type { Response, Request } from 'express';
 
 import { Router } from 'express';
 
-import { Logger } from '@polygonlabs/servercore';
-
 import { InfoError } from '../helpers/errorHelper.ts';
 import {
   handleBadRequest,
   handleError,
   handleResponse,
 } from '../helpers/responseHandlers.ts';
+import { getLogger } from '../logger.ts';
 import { bridge, merkelProofGenerator } from '../services/index.ts';
 import { isInteger } from './utils.ts';
 
 const router = Router();
+const logger = getLogger();
 
 function validateZkEVMNetwork(res: Response, network: string | undefined) {
   if (
@@ -73,7 +73,7 @@ router.get('/bridge', async (req: Request, res: Response) => {
     if (error instanceof InfoError) {
       return handleError({ res, statusCode: 404, err: error });
     }
-    Logger.error({ message: 'error in bridge route', error });
+    logger.error({ message: 'error in bridge route', error });
     return handleError({ res });
   }
 });
@@ -102,7 +102,7 @@ router.get('/merkle-proof', async (req: Request, res: Response) => {
     if (error instanceof InfoError) {
       return handleError({ res, statusCode: 404, err: error });
     }
-    Logger.error({
+    logger.error({
       message: 'error in merkelProofGenerator route',
       error,
     });

@@ -1,1 +1,3 @@
-console.log('stub');
+import { startApiServer } from '../index.ts';
+
+void startApiServer();

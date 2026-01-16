@@ -2,14 +2,13 @@ import type { Response, Request } from 'express';
 
 import { Router } from 'express';
 
-import { Logger } from '@polygonlabs/servercore';
-
 import { InfoError } from '../helpers/errorHelper.ts';
 import {
   handleBadRequest,
   handleError,
   handleResponse,
 } from '../helpers/responseHandlers.ts';
+import { getLogger } from '../logger.ts';
 import {
   isBlockIncluded,
   fastMerkleProof,
@@ -18,6 +17,7 @@ import {
 } from '../services/index.ts';
 import { isInteger } from './utils.ts';
 
+const logger = getLogger();
 const router = Router();
 
 /**
@@ -118,7 +118,7 @@ router.get(
       if (error instanceof InfoError) {
         return handleError({ res, statusCode: 404, err: error });
       }
-      Logger.error({ message: 'error in isBlockIncluded route', error });
+      logger.error({ message: 'error in isBlockIncluded route', error });
       return handleError({ res });
     }
   },
@@ -185,7 +185,7 @@ router.get('/fast-merkle-proof', async (req: Request, res: Response) => {
     if (error instanceof InfoError) {
       return handleError({ res, statusCode: 404, err: error });
     }
-    Logger.error({ message: 'error in fastMerkleProof route', error });
+    logger.error({ message: 'error in fastMerkleProof route', error });
     return handleError({ res });
   }
 });
@@ -219,7 +219,7 @@ router.get('/exit-payload/:burnTxHash', async (req: Request, res: Response) => {
     if (error instanceof InfoError) {
       return handleError({ res, statusCode: 404, err: error });
     }
-    Logger.error({ message: 'error in callExitPayload route', error });
+    logger.error({ message: 'error in callExitPayload route', error });
     return handleError({ res });
   }
 });
@@ -254,7 +254,7 @@ router.get(
       if (error instanceof InfoError) {
         return handleError({ res, statusCode: 404, err: error });
       }
-      Logger.error({ message: 'error in allExitPayloads route', error });
+      logger.error({ message: 'error in allExitPayloads route', error });
       return handleError({ res });
     }
   },

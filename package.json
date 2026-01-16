@@ -17,7 +17,9 @@
   "engines": {
     "node": ">=25.2.1"
   },
+  "main": "src/bin/apiServer.ts",
   "devDependencies": {
+    "@dotenvx/dotenvx": "^1.51.4",
     "@types/chai": "^5.2.3",
     "@types/chai-as-promised": "^8.0.2",
     "@types/cors": "^2.8.19",
@@ -44,11 +46,12 @@
   "dependencies": {
     "@maticnetwork/maticjs": "3.9.6",
     "@maticnetwork/maticjs-ethers": "^1.1.0",
-    "@polygonlabs/servercore": "^1.0.0",
     "@t3-oss/env-core": "^0.13.10",
+    "@types/winston": "^2.4.4",
     "cors": "^2.8.5",
     "ethers": "5.5.1",
     "express": "^5.2.1",
+    "winston": "^3.19.0",
     "zod": "^3.25.76"
   }
 }

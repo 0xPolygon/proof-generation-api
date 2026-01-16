@@ -1,10 +1,15 @@
 import type { IPOSClientConfig } from '@maticnetwork/maticjs';
 
-import { Converter, POSClient, use } from '@maticnetwork/maticjs';
-import { Web3ClientPlugin } from '@maticnetwork/maticjs-ethers';
+import maticJs from '@maticnetwork/maticjs';
+import maticJs_Ethers from '@maticnetwork/maticjs-ethers';
 import { providers } from 'ethers';
 
 import { config } from '../config.ts';
+
+const { Converter, POSClient, use } = maticJs; // default export :(
+
+// eslint-disable-next-line import-x/no-named-as-default-member
+const { Web3ClientPlugin } = maticJs_Ethers; // Default export shenanigans
 
 // install web3 plugin
 use(Web3ClientPlugin);
