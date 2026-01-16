@@ -25,6 +25,36 @@ const isJsonStringArray = (val: string, ctx: z.RefinementCtx) => {
   }
 };
 
+// Ref: https://github.com/t3-oss/t3-env/pull/145
+const booleanStrings = [
+  'true',
+  'false',
+  true,
+  false,
+  '1',
+  '0',
+  'yes',
+  'no',
+  'y',
+  'n',
+  'on',
+  'off',
+];
+
+const BooleanOrBooleanStringSchema = z
+  .any()
+  .refine((val) => booleanStrings.includes(val), { message: 'must be boolean' })
+  .transform((val) => {
+    if (typeof val === 'boolean') return val;
+    if (typeof val === 'string') {
+      const normalized = val.toLowerCase().trim();
+      if (['true', 'yes', 'y', '1', 'on'].includes(normalized)) return true;
+      if (['false', 'no', 'n', '0', 'off'].includes(normalized)) return false;
+      throw new Error(`Invalid boolean string: "${val}"`);
+    }
+    throw new Error(`Expected boolean or boolean string, got: ${typeof val}`);
+  });
+
 export const env = createEnv({
   server: {
     NODE_ENV: z
@@ -40,6 +70,7 @@ export const env = createEnv({
     ZKEVM_TESTNET_URL: z.string(),
     ERPC_SECRET_TOKEN: z.string().optional(),
     SENTRY_DSN: z.string().optional(),
+    PRETTY_LOGS: BooleanOrBooleanStringSchema.default(false),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

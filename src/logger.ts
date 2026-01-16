@@ -6,11 +6,30 @@ import {
   transports,
 } from 'winston';
 
+import { env } from './env.ts';
+
+const { combine, json, prettyPrint, colorize, errors } = format;
+const { PRETTY_LOGS } = env;
+
 export function createLogger(config?: LoggerOptions) {
+  const formats = [json()];
+
+  if (PRETTY_LOGS) {
+    formats.push(errors({ stack: true }));
+    formats.push(prettyPrint());
+    formats.push(
+      colorize({
+        all: true,
+        level: true,
+      }),
+    );
+  }
+
   return createWinstonLogger({
-    format: format.json(),
+    format: combine(...formats),
     transports: [new transports.Console()],
     ...config,
+    level: 'debug',
   });
 }
 
