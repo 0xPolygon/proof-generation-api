@@ -12,6 +12,7 @@
     "format": "prettier --write .",
     "test": "mocha",
     "start": "node src/bin/apiServer.ts",
+    "dev": "chokidar 'src/**/*' --initial --await-write-finish --delay 100 --silent -c 'dotenvx run -- npm start'",
     "prepare": "husky"
   },
   "engines": {
@@ -29,6 +30,7 @@
     "@types/supertest": "^6.0.3",
     "chai": "^6.2.2",
     "chai-as-promised": "^8.0.2",
+    "chokidar-cli": "^3.0.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
