@@ -6,15 +6,15 @@
  * @param {String} proof
  * @returns {Boolean}
 */
-export function verifyMerkleProof(number, start, proof) {
+export function verifyMerkleProof(number: string, start: string, proof: string) {
   const index = parseInt(number, 10) - parseInt(start, 10)
   if (!proof) {
-    return false
+    return false;
   }
 
   const proofLength = Buffer.from(proof.replace('0x', '')).length
   if (proofLength % 32 !== 0) {
-    return false
+    return false;
   }
 
   const proofHeight = proofLength / 32

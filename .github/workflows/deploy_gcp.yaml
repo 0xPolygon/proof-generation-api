@@ -1,7 +1,7 @@
 name: Proof Gen API Deploy docker image to GCP
 on:
   push:
-    branches: 
+    branches:
       - master
   workflow_dispatch:
     inputs:
@@ -20,8 +20,8 @@ jobs:
 
   docker-release:
     needs:
-        - generate-version  
-    uses: 0xPolygon/pipelines/.github/workflows/gcp_pipeline_release_image.yaml@main    
+        - generate-version
+    uses: 0xPolygon/pipelines/.github/workflows/gcp_pipeline_release_image.yaml@main
     with:
         image_name: "proof-generation-api"
         image_tag: ${{ inputs.tag || needs.generate-version.outputs.version }}

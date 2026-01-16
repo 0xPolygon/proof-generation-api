@@ -8,7 +8,7 @@ on a dedicated backend server. Proof generation and block inclusion check are so
 ```bash
 $ git clone https://github.com/maticnetwork/proof-generation-api
 $ cd proof-generation-api
-$ npm install
+$ bun install
 
 ```
 
@@ -18,27 +18,14 @@ For development
 
 ```bash
 # For APIs
-$ npm run dev
+$ bun run dev
 ```
 
 For production
 
 ```bash
 # For APIs
-$ npm run start
-```
-
-With PM2
-
-```bash
-$ pm2 start processes.yml
-```
-
-To test the API
-
-```bash
-# To test API
-$ npm run test
+$ bun run start
 ```
 
 ## API Endpoints

@@ -1,14 +1,14 @@
-FROM node:20-bookworm-slim@sha256:b342de02eb4a57cd6986290a69833d20818508db8078dba0197a024193410aee
+# Stage 1: Build stage
+FROM oven/bun:1.2-alpine AS builder
 WORKDIR /app
-RUN apt-get update || : && apt-get install -y \
-    python3 \
-    build-essential \
-    libsasl2-dev \
-    libsasl2-modules \
-    libssl-dev \
-    git
-COPY ["package.json", "package-lock.json*", "./"]
-RUN npm install
 COPY . .
+RUN bun install --dev --no-cache
+RUN bun run build
+
+# Stage 2: Runtime stage
+FROM oven/bun:1.2-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
 EXPOSE 5000
-ENTRYPOINT [ "node", "src/index.js" ]
+CMD ["bun", "run", "dist/index.js"]
