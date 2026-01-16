@@ -1,16 +1,21 @@
-import type { MiddlewareHandler } from 'hono';
+import type { Context } from 'hono';
 
 import { Hono } from 'hono';
 
-import { zkEVMController } from '../controllers/index.ts';
-import { handleBadRequest } from '../helpers/responseHandlers.ts';
+import { Logger } from '@polygonlabs/servercore';
+
+import { InfoError } from '../helpers/errorHelper.ts';
+import {
+  handleBadRequest,
+  handleError,
+  handleResponse,
+} from '../helpers/responseHandlers.ts';
+import { bridge, merkelProofGenerator } from '../services/index.ts';
 import { isInteger } from './utils.ts';
 
 const router = new Hono();
 
-const validateZkEVMNetworkParam: MiddlewareHandler = async (context, next) => {
-  const network = context.req.param('network');
-
+function validateZkEVMNetwork(c: Context, network: string | undefined) {
   if (
     network !== 'mainnet' &&
     network !== 'testnet' &&
@@ -18,21 +23,18 @@ const validateZkEVMNetworkParam: MiddlewareHandler = async (context, next) => {
     network !== 'cardona'
   ) {
     return handleBadRequest({
-      c: context,
+      c,
       errMsg: `Invalid network ${network}. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes`,
     });
   }
+  return null;
+}
 
-  context.set('validatedZkevmNetworkParams', {
-    network,
-  });
-  return await next();
-};
-
-const validateZkEVMParams: MiddlewareHandler = async (context, next) => {
-  const networkID = context.req.query('net_id');
-  const depositCount = context.req.query('deposit_cnt');
-
+function validateNetworkIDAndDepositCount(
+  c: Context,
+  networkID: string | undefined,
+  depositCount: string | undefined,
+) {
   if (
     !networkID ||
     !depositCount ||
@@ -40,31 +42,72 @@ const validateZkEVMParams: MiddlewareHandler = async (context, next) => {
     !isInteger(depositCount)
   ) {
     return handleBadRequest({
-      c: context,
+      c,
       errMsg: 'Invalid network ID or deposit count!',
     });
   }
+  return null;
+}
 
-  context.set('validatedZkevmParams', {
-    networkID: parseInt(networkID, 10),
-    depositCount: parseInt(depositCount, 10),
-  });
+router.get('/bridge', async (c: Context) => {
+  try {
+    const networkID = c.req.query('net_id');
+    const depositCount = c.req.query('deposit_cnt');
+    const network = c.req.param('network');
 
-  return await next();
-};
+    const validationError =
+      validateNetworkIDAndDepositCount(c, networkID, depositCount) ||
+      validateZkEVMNetwork(c, network);
 
-router.get(
-  '/bridge',
-  validateZkEVMParams,
-  validateZkEVMNetworkParam,
-  zkEVMController.callBridge,
-);
+    if (validationError) {
+      return validationError;
+    }
 
-router.get(
-  '/merkle-proof',
-  validateZkEVMParams,
-  validateZkEVMNetworkParam,
-  zkEVMController.callMerkelProofGenerator,
-);
+    const responseObj = await bridge(
+      parseInt(networkID!, 10),
+      parseInt(depositCount!, 10),
+      network!,
+    );
+    return handleResponse({ c, data: responseObj });
+  } catch (error) {
+    if (error instanceof InfoError) {
+      return handleError({ c, statusCode: 404, err: error });
+    }
+    Logger.error({ message: 'error in bridge route', error });
+    return handleError({ c });
+  }
+});
+
+router.get('/merkle-proof', async (c: Context) => {
+  try {
+    const networkID = c.req.query('net_id');
+    const depositCount = c.req.query('deposit_cnt');
+    const network = c.req.param('network');
+
+    const validationError =
+      validateNetworkIDAndDepositCount(c, networkID, depositCount) ||
+      validateZkEVMNetwork(c, network);
+
+    if (validationError) {
+      return validationError;
+    }
+
+    const responseObj = await merkelProofGenerator(
+      parseInt(networkID!, 10),
+      parseInt(depositCount!, 10),
+      network!,
+    );
+    return handleResponse({ c, data: responseObj });
+  } catch (error) {
+    if (error instanceof InfoError) {
+      return handleError({ c, statusCode: 404, err: error });
+    }
+    Logger.error({
+      message: 'error in merkelProofGenerator route',
+      error,
+    });
+    return handleError({ c });
+  }
+});
 
 export { router as zkEVMRoutes };
