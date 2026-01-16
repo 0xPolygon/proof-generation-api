@@ -11,7 +11,7 @@
     "target": "esnext",
     // For nodejs:
     "lib": ["esnext"],
-    "types": ["node"],
+    "types": ["node", "mocha"],
 
     // Other Outputs
     "sourceMap": true,
@@ -40,7 +40,8 @@
     "skipLibCheck": true,
 
     // This is a TS native service :tada:
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true // Ensure all TS syntax does not have runtime impact
   },
   "exclude": ["node_modules", "dist"]
 }

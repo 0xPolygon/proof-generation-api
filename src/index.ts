@@ -1,12 +1,12 @@
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
+import cors from 'cors';
+import express, { json } from 'express';
 
 import { Logger } from '@polygonlabs/servercore';
 
 import { env } from './env.ts';
 import { indexRoutes } from './routes/index.ts';
 
-const app = new Hono();
+const app = express();
 
 async function serve(): Promise<void> {
   const loggerConfig: any = {
@@ -25,14 +25,18 @@ async function serve(): Promise<void> {
   Logger.create(loggerConfig);
 
   // Middlewares
-  // app.use("*", logger()); // Logs all requests
-  app.use('*', cors()); // Enables CORS for all routes
+  app.use(cors()); // Enables CORS for all routes
+  app.use(json()); // Parse JSON bodies
 
   // Register routes
-  app.route('/api', indexRoutes);
+  app.use('/api', indexRoutes);
 
-  app.get('/health-check', (c) => {
-    return c.json({ success: true, message: 'Health Check Success' }, 200);
+  app.get('/health-check', (_req, res) => {
+    res.status(200).json({ success: true, message: 'Health Check Success' });
+  });
+
+  app.listen(env.PORT, () => {
+    Logger.info({ message: `Server started on port ${env.PORT}` });
   });
 }
 
@@ -41,5 +45,4 @@ void serve();
 export const serverConfig = {
   port: env.PORT,
   idleTimeout: 120,
-  fetch: app.fetch,
 };

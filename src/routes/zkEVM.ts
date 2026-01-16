@@ -1,6 +1,6 @@
-import type { Context } from 'hono';
+import type { Response, Request } from 'express';
 
-import { Hono } from 'hono';
+import { Router } from 'express';
 
 import { Logger } from '@polygonlabs/servercore';
 
@@ -13,9 +13,9 @@ import {
 import { bridge, merkelProofGenerator } from '../services/index.ts';
 import { isInteger } from './utils.ts';
 
-const router = new Hono();
+const router = Router();
 
-function validateZkEVMNetwork(c: Context, network: string | undefined) {
+function validateZkEVMNetwork(res: Response, network: string | undefined) {
   if (
     network !== 'mainnet' &&
     network !== 'testnet' &&
@@ -23,7 +23,7 @@ function validateZkEVMNetwork(c: Context, network: string | undefined) {
     network !== 'cardona'
   ) {
     return handleBadRequest({
-      c,
+      res,
       errMsg: `Invalid network ${network}. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes`,
     });
   }
@@ -31,7 +31,7 @@ function validateZkEVMNetwork(c: Context, network: string | undefined) {
 }
 
 function validateNetworkIDAndDepositCount(
-  c: Context,
+  res: Response,
   networkID: string | undefined,
   depositCount: string | undefined,
 ) {
@@ -42,71 +42,71 @@ function validateNetworkIDAndDepositCount(
     !isInteger(depositCount)
   ) {
     return handleBadRequest({
-      c,
+      res,
       errMsg: 'Invalid network ID or deposit count!',
     });
   }
   return null;
 }
 
-router.get('/bridge', async (c: Context) => {
+router.get('/bridge', async (req: Request, res: Response) => {
   try {
-    const networkID = c.req.query('net_id');
-    const depositCount = c.req.query('deposit_cnt');
-    const network = c.req.param('network');
+    const networkID = req.query['net_id'] as string;
+    const depositCount = req.query['deposit_cnt'] as string;
+    const network = req.params['network'] as string;
 
     const validationError =
-      validateNetworkIDAndDepositCount(c, networkID, depositCount) ||
-      validateZkEVMNetwork(c, network);
+      validateNetworkIDAndDepositCount(res, networkID, depositCount) ||
+      validateZkEVMNetwork(res, network);
 
     if (validationError) {
       return validationError;
     }
 
     const responseObj = await bridge(
-      parseInt(networkID!, 10),
-      parseInt(depositCount!, 10),
-      network!,
+      parseInt(networkID, 10),
+      parseInt(depositCount, 10),
+      network,
     );
-    return handleResponse({ c, data: responseObj });
+    return handleResponse({ res, data: responseObj });
   } catch (error) {
     if (error instanceof InfoError) {
-      return handleError({ c, statusCode: 404, err: error });
+      return handleError({ res, statusCode: 404, err: error });
     }
     Logger.error({ message: 'error in bridge route', error });
-    return handleError({ c });
+    return handleError({ res });
   }
 });
 
-router.get('/merkle-proof', async (c: Context) => {
+router.get('/merkle-proof', async (req: Request, res: Response) => {
   try {
-    const networkID = c.req.query('net_id');
-    const depositCount = c.req.query('deposit_cnt');
-    const network = c.req.param('network');
+    const networkID = req.query['net_id'] as string;
+    const depositCount = req.query['deposit_cnt'] as string;
+    const network = req.params['network'] as string;
 
     const validationError =
-      validateNetworkIDAndDepositCount(c, networkID, depositCount) ||
-      validateZkEVMNetwork(c, network);
+      validateNetworkIDAndDepositCount(res, networkID, depositCount) ||
+      validateZkEVMNetwork(res, network);
 
     if (validationError) {
       return validationError;
     }
 
     const responseObj = await merkelProofGenerator(
-      parseInt(networkID!, 10),
-      parseInt(depositCount!, 10),
-      network!,
+      parseInt(networkID, 10),
+      parseInt(depositCount, 10),
+      network,
     );
-    return handleResponse({ c, data: responseObj });
+    return handleResponse({ res, data: responseObj });
   } catch (error) {
     if (error instanceof InfoError) {
-      return handleError({ c, statusCode: 404, err: error });
+      return handleError({ res, statusCode: 404, err: error });
     }
     Logger.error({
       message: 'error in merkelProofGenerator route',
       error,
     });
-    return handleError({ c });
+    return handleError({ res });
   }
 });
 
