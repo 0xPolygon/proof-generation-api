@@ -4,7 +4,7 @@ import { cors } from 'hono/cors';
 import { Logger } from '@polygonlabs/servercore';
 
 import { env } from './env.ts';
-import indexRoutes from './routes/index.ts';
+import { indexRoutes } from './routes/index.ts';
 
 const app = new Hono();
 
@@ -38,7 +38,7 @@ async function serve(): Promise<void> {
 
 void serve();
 
-export default {
+export const serverConfig = {
   port: env.PORT,
   idleTimeout: 120,
   fetch: app.fetch,

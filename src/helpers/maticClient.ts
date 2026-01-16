@@ -4,7 +4,7 @@ import { Converter, POSClient, use } from '@maticnetwork/maticjs';
 import { Web3ClientPlugin } from '@maticnetwork/maticjs-ethers';
 import { providers } from 'ethers';
 
-import config from '../config.ts';
+import { config } from '../config.ts';
 
 // install web3 plugin
 use(Web3ClientPlugin);

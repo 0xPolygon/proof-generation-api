@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 
-import v1Route from './v1.ts';
-import zkEVMRoute from './zkEVM.ts';
+import { v1Routes } from './v1.ts';
+import { zkEVMRoutes } from './zkEVM.ts';
 
 const router = new Hono();
 
-router.route('/v1/:network', v1Route);
-router.route('/zkevm/:network', zkEVMRoute);
+router.route('/v1/:network', v1Routes);
+router.route('/zkevm/:network', zkEVMRoutes);
 
-export default router;
+export { router as indexRoutes };

@@ -17,4 +17,4 @@ const config = {
   testnetRpcIndex: 0,
 };
 
-export default config;
+export { config };
