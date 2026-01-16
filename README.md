@@ -51,13 +51,11 @@ The following endpoints with the exception of "list all" and "healthcheck" are w
 ### Block inclusion in checkpoint
 
 - GET `/api/v1/matic/block-included/{blockNumber}`
-
   - summary: Check if a block is checkpointed
 
   - description: Checks if a block on Polygon Mainnet has been checkpointed to the Ethereum Mainnet by the validators. Also this endpoint returns details of the checkpoint in which the block has been included.
 
   - parameters:
-
     1. - name: blockNumber
        - in: path
        - description: block number to query
@@ -87,13 +85,11 @@ The following endpoints with the exception of "list all" and "healthcheck" are w
 ### Exit Payload
 
 - GET `/api/v1/matic/exit-payload/{burnTxHash}?eventSignature={eventSignature}`
-
   - summary: Returns the payload to complete the exit/proof submission.
 
   - description: Returns the input payload that has to be passed to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
 
   - parameters:
-
     1. - name: burnTxHash
        - in: path
        - description: burn TransactionHash
@@ -120,13 +116,11 @@ The following endpoints with the exception of "list all" and "healthcheck" are w
 ### All Exit Payloads
 
 - GET `/api/v1/matic/all-exit-payloads/{burnTxHash}?eventSignature={eventSignature}`
-
   - summary: Returns an array of payloads of all tokens in a particular burnTx to complete the exit/proof submission.
 
   - description: Returns the input payloads that has to be passed individually to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
 
   - parameters:
-
     1. - name: burnTxHash
        - in: path
        - description: burn TransactionHash
@@ -148,13 +142,11 @@ The following endpoints with the exception of "list all" and "healthcheck" are w
 ### Fast Merkle Proof
 
 - GET `/api/v1/matic/fast-merkle-proof?start={Start}&end={End}&number={BlockNumber}`
-
   - summary: Returns the fast merkle block proof.
 
   - description: Returns the block proof by making use of an optimised logic that gets the block details with minimum possible RPC calls to the Polygon Mainnet. This block proof can be further used to create the final payload that has to be used to complete the exit/proof submission step on the Ethereum mainnet.
 
   - parameters:
-
     1. - name: start
        - in: query
        - description: start block number of the range which includes the block number to query

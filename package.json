@@ -1,26 +1,45 @@
 {
   "name": "proof-generation-api",
+  "version": "1.0.0",
   "module": "index.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsup",
-    "start": "bun dist/index.js",
-    "tests": "echo 'Hello unit tests'",
-    "tests:integration": "echo 'Hello integration tests'"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "start": "node src/bin/apiServer.ts"
+  },
+  "engines": {
+    "node": ">=25.2.1"
   },
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "@types/chai": "^5.2.3",
+    "@types/chai-as-promised": "^8.0.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.0.9",
+    "chai": "^6.2.2",
+    "chai-as-promised": "^8.0.2",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import-x": "^4.16.1",
+    "eslint-plugin-perfectionist": "^5.3.1",
+    "globals": "^17.0.0",
+    "mocha": "^11.7.5",
+    "prettier": "^3.8.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.53.0"
   },
   "dependencies": {
     "@maticnetwork/maticjs": "3.9.6",
     "@maticnetwork/maticjs-ethers": "^1.1.0",
     "@polygonlabs/servercore": "^1.0.0",
+    "@t3-oss/env-core": "^0.13.10",
     "ethers": "5.5.1",
     "hono": "^4.9.0",
-    "tsup": "^8.5.0"
+    "zod": "^3.25.76"
   }
 }

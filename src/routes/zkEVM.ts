@@ -1,21 +1,22 @@
-import { Hono } from 'hono'
+import { Hono } from 'hono';
+
+import { zkEVMController } from '../controllers';
 import { validateParams } from '../middleware';
-import { zkEVMController } from '../controllers'
 
 const router = new Hono();
 
 router.get(
-    '/bridge',
-    validateParams.validateZkEVMParams,
-    validateParams.validateZkEVMNetworkParam,
-    zkEVMController.callBridge
-)
+  '/bridge',
+  validateParams.validateZkEVMParams,
+  validateParams.validateZkEVMNetworkParam,
+  zkEVMController.callBridge,
+);
 
 router.get(
-    '/merkle-proof',
-    validateParams.validateZkEVMParams,
-    validateParams.validateZkEVMNetworkParam,
-    zkEVMController.callMerkelProofGenerator
-)
+  '/merkle-proof',
+  validateParams.validateZkEVMParams,
+  validateParams.validateZkEVMNetworkParam,
+  zkEVMController.callMerkelProofGenerator,
+);
 
-export default router
+export default router;

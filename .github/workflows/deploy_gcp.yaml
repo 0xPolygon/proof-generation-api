@@ -20,9 +20,9 @@ jobs:
 
   docker-release:
     needs:
-        - generate-version
+      - generate-version
     uses: 0xPolygon/pipelines/.github/workflows/gcp_pipeline_release_image.yaml@main
     with:
-        image_name: "proof-generation-api"
-        image_tag: ${{ inputs.tag || needs.generate-version.outputs.version }}
-        checkout_ref: ${{ github.ref_name }}
+      image_name: 'proof-generation-api'
+      image_tag: ${{ inputs.tag || needs.generate-version.outputs.version }}
+      checkout_ref: ${{ github.ref_name }}
