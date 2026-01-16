@@ -57,21 +57,29 @@ function validateV1Network(res: Response, network: string | undefined) {
 
 function validateBurnTxAndEventSignature(
   res: Response,
-  burnTxHash: string | undefined,
-  eventSignature: string | undefined,
+  burnTxHash: string | string[] | undefined,
+  eventSignature: string | string[] | undefined,
 ) {
-  if (!burnTxHash || !eventSignature) {
+  if (
+    typeof burnTxHash !== 'string' ||
+    typeof eventSignature !== 'string' ||
+    !burnTxHash ||
+    !eventSignature
+  ) {
     return handleBadRequest({
       res,
       errMsg: 'Invalid burnTxHash or eventSignature!',
     });
   }
 
+  const burnTxHashStr = burnTxHash;
+  const eventSignatureStr = eventSignature;
+
   if (
-    !burnTxHash.startsWith('0x') ||
-    !eventSignature.startsWith('0x') ||
-    burnTxHash.length !== 66 ||
-    eventSignature.length !== 66
+    !burnTxHashStr.startsWith('0x') ||
+    !eventSignatureStr.startsWith('0x') ||
+    burnTxHashStr.length !== 66 ||
+    eventSignatureStr.length !== 66
   ) {
     return handleBadRequest({
       res,
