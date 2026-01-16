@@ -88,13 +88,15 @@ function getV1NetworkDetails(network: string | undefined) {
 }
 
 router.get(
-  '/block-included/:blockNumber',
+  '/:network/block-included/:blockNumber',
   async (req: Request, res: Response) => {
     try {
       const blockNumber = req.params['blockNumber'] as string;
       const network = req.params['network'] as string;
 
       if (!blockNumber || !isInteger(blockNumber)) {
+        logger.debug({ message: 'Invalid block number!', blockNumber });
+
         return handleBadRequest({
           res,
           errMsg: 'Invalid block number!',
@@ -103,6 +105,8 @@ router.get(
 
       const validationError = validateV1Network(res, network);
       if (validationError) {
+        logger.debug({ message: `Invalid network ${network}!`, blockNumber });
+
         return validationError;
       }
 
@@ -124,108 +128,117 @@ router.get(
   },
 );
 
-router.get('/fast-merkle-proof', async (req: Request, res: Response) => {
-  try {
-    const startParam = req.query['start'] as string;
-    const endParam = req.query['end'] as string;
-    const numberParam = req.query['number'] as string;
-    const network = req.params['network'] as string;
+router.get(
+  '/:network/fast-merkle-proof',
+  async (req: Request, res: Response) => {
+    try {
+      const startParam = req.query['start'] as string;
+      const endParam = req.query['end'] as string;
+      const numberParam = req.query['number'] as string;
+      const network = req.params['network'] as string;
 
-    if (
-      !startParam ||
-      !isInteger(startParam) ||
-      !endParam ||
-      !isInteger(endParam) ||
-      !numberParam ||
-      !isInteger(numberParam)
-    ) {
-      return handleBadRequest({
-        res,
-        errMsg: 'Invalid start, end or block number!',
-      });
+      if (
+        !startParam ||
+        !isInteger(startParam) ||
+        !endParam ||
+        !isInteger(endParam) ||
+        !numberParam ||
+        !isInteger(numberParam)
+      ) {
+        return handleBadRequest({
+          res,
+          errMsg: 'Invalid start, end or block number!',
+        });
+      }
+
+      const start = parseInt(startParam, 10);
+      const end = parseInt(endParam, 10);
+      const number = parseInt(numberParam, 10);
+
+      if (end < start || number > end || number < start) {
+        return handleBadRequest({
+          res,
+          errMsg: 'Invalid start or end or block numbers!',
+        });
+      }
+
+      const validationError = validateV1Network(res, network);
+      if (validationError) {
+        return validationError;
+      }
+
+      const { version, isMainnet } = getV1NetworkDetails(network);
+
+      const responseObj = await fastMerkleProof(
+        startParam,
+        endParam,
+        number,
+        isMainnet,
+        version,
+      );
+
+      if (
+        !responseObj ||
+        !responseObj.proof ||
+        !verifyMerkleProof(numberParam, startParam, responseObj.proof)
+      ) {
+        handleError({ res, errMsg: 'Invalid merkle proof created' });
+        return;
+      }
+
+      return handleResponse({ res, data: responseObj });
+    } catch (error) {
+      if (error instanceof InfoError) {
+        return handleError({ res, statusCode: 404, err: error });
+      }
+      logger.error({ message: 'error in fastMerkleProof route', error });
+      return handleError({ res });
     }
-
-    const start = parseInt(startParam, 10);
-    const end = parseInt(endParam, 10);
-    const number = parseInt(numberParam, 10);
-
-    if (end < start || number > end || number < start) {
-      return handleBadRequest({
-        res,
-        errMsg: 'Invalid start or end or block numbers!',
-      });
-    }
-
-    const validationError = validateV1Network(res, network);
-    if (validationError) {
-      return validationError;
-    }
-
-    const { version, isMainnet } = getV1NetworkDetails(network);
-
-    const responseObj = await fastMerkleProof(
-      startParam,
-      endParam,
-      number,
-      isMainnet,
-      version,
-    );
-
-    if (
-      !responseObj ||
-      !responseObj.proof ||
-      !verifyMerkleProof(numberParam, startParam, responseObj.proof)
-    ) {
-      handleError({ res, errMsg: 'Invalid merkle proof created' });
-      return;
-    }
-
-    return handleResponse({ res, data: responseObj });
-  } catch (error) {
-    if (error instanceof InfoError) {
-      return handleError({ res, statusCode: 404, err: error });
-    }
-    logger.error({ message: 'error in fastMerkleProof route', error });
-    return handleError({ res });
-  }
-});
-
-router.get('/exit-payload/:burnTxHash', async (req: Request, res: Response) => {
-  try {
-    const burnTxHash = req.params['burnTxHash'] as string;
-    const eventSignature = req.query['eventSignature'] as string;
-    const network = req.params['network'] as string;
-
-    const validationError =
-      validateBurnTxAndEventSignature(res, burnTxHash, eventSignature) ||
-      validateV1Network(res, network);
-
-    if (validationError) {
-      return validationError;
-    }
-
-    const { version, isMainnet } = getV1NetworkDetails(network);
-    const tokenIndex = parseInt((req.query['tokenIndex'] as string) || '0', 10);
-    const responseObj = await generateExitPayload(
-      burnTxHash,
-      eventSignature,
-      tokenIndex,
-      isMainnet,
-      version,
-    );
-
-    return handleResponse({ res, data: responseObj });
-  } catch (error) {
-    if (error instanceof InfoError) {
-      return handleError({ res, statusCode: 404, err: error });
-    }
-    logger.error({ message: 'error in callExitPayload route', error });
-    return handleError({ res });
-  }
-});
+  },
+);
 
 router.get(
-  '/all-exit-payloads/:burnTxHash',
+  '/:network/exit-payload/:burnTxHash',
+  async (req: Request, res: Response) => {
+    try {
+      const burnTxHash = req.params['burnTxHash'] as string;
+      const eventSignature = req.query['eventSignature'] as string;
+      const network = req.params['network'] as string;
+
+      const validationError =
+        validateBurnTxAndEventSignature(res, burnTxHash, eventSignature) ||
+        validateV1Network(res, network);
+
+      if (validationError) {
+        return validationError;
+      }
+
+      const { version, isMainnet } = getV1NetworkDetails(network);
+      const tokenIndex = parseInt(
+        (req.query['tokenIndex'] as string) || '0',
+        10,
+      );
+      const responseObj = await generateExitPayload(
+        burnTxHash,
+        eventSignature,
+        tokenIndex,
+        isMainnet,
+        version,
+      );
+
+      return handleResponse({ res, data: responseObj });
+    } catch (error) {
+      if (error instanceof InfoError) {
+        return handleError({ res, statusCode: 404, err: error });
+      }
+      logger.error({ message: 'error in callExitPayload route', error });
+      return handleError({ res });
+    }
+  },
+);
+
+router.get(
+  '/:network/all-exit-payloads/:burnTxHash',
   async (req: Request, res: Response) => {
     try {
       const burnTxHash = req.params['burnTxHash'] as string;

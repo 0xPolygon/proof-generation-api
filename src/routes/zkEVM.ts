@@ -49,7 +49,7 @@ function validateNetworkIDAndDepositCount(
   return null;
 }
 
-router.get('/bridge', async (req: Request, res: Response) => {
+router.get('/:network/bridge', async (req: Request, res: Response) => {
   try {
     const networkID = req.query['net_id'] as string;
     const depositCount = req.query['deposit_cnt'] as string;
@@ -78,7 +78,7 @@ router.get('/bridge', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/merkle-proof', async (req: Request, res: Response) => {
+router.get('/:network/merkle-proof', async (req: Request, res: Response) => {
   try {
     const networkID = req.query['net_id'] as string;
     const depositCount = req.query['deposit_cnt'] as string;
