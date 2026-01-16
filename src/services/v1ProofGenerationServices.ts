@@ -364,7 +364,8 @@ export async function generateAllExitPayloads(
 
       // check for checkpoint
       try {
-        logger.info(`Checking for checkpoint status ${burnTxHash}`);
+        const safeBurnTxHash = burnTxHash.replace(/[\r\n]/g, '');
+        logger.info(`Checking for checkpoint status ${safeBurnTxHash}`);
         isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
         logger.info({ isCheckpointed: isCheckpointed });
       } catch (error) {
