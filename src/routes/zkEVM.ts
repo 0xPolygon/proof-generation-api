@@ -3,11 +3,7 @@ import type { Response, Request } from 'express';
 import { Router } from 'express';
 
 import { InfoError } from '../helpers/errorHelper.ts';
-import {
-  handleBadRequest,
-  handleError,
-  handleResponse,
-} from '../helpers/responseHandlers.ts';
+import { handleBadRequest, handleError, handleResponse } from '../helpers/responseHandlers.ts';
 import { getLogger } from '../logger.ts';
 import { bridge, merkelProofGenerator } from '../services/index.ts';
 import { isInteger } from './utils.ts';
@@ -24,7 +20,7 @@ function validateZkEVMNetwork(res: Response, network: string | undefined) {
   ) {
     return handleBadRequest({
       res,
-      errMsg: `Invalid network ${network}. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes`,
+      errMsg: `Invalid network ${network}. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes`
     });
   }
   return null;
@@ -33,17 +29,12 @@ function validateZkEVMNetwork(res: Response, network: string | undefined) {
 function validateNetworkIDAndDepositCount(
   res: Response,
   networkID: string | undefined,
-  depositCount: string | undefined,
+  depositCount: string | undefined
 ) {
-  if (
-    !networkID ||
-    !depositCount ||
-    !isInteger(networkID) ||
-    !isInteger(depositCount)
-  ) {
+  if (!networkID || !depositCount || !isInteger(networkID) || !isInteger(depositCount)) {
     return handleBadRequest({
       res,
-      errMsg: 'Invalid network ID or deposit count!',
+      errMsg: 'Invalid network ID or deposit count!'
     });
   }
   return null;
@@ -63,11 +54,7 @@ router.get('/:network/bridge', async (req: Request, res: Response) => {
       return validationError;
     }
 
-    const responseObj = await bridge(
-      parseInt(networkID, 10),
-      parseInt(depositCount, 10),
-      network,
-    );
+    const responseObj = await bridge(parseInt(networkID, 10), parseInt(depositCount, 10), network);
     return handleResponse({ res, data: responseObj });
   } catch (error) {
     if (error instanceof InfoError) {
@@ -95,7 +82,7 @@ router.get('/:network/merkle-proof', async (req: Request, res: Response) => {
     const responseObj = await merkelProofGenerator(
       parseInt(networkID, 10),
       parseInt(depositCount, 10),
-      network,
+      network
     );
     return handleResponse({ res, data: responseObj });
   } catch (error) {
@@ -104,7 +91,7 @@ router.get('/:network/merkle-proof', async (req: Request, res: Response) => {
     }
     logger.error({
       message: 'error in merkelProofGenerator route',
-      error,
+      error
     });
     return handleError({ res });
   }

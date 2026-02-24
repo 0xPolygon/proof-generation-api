@@ -26,9 +26,7 @@ describe('block inclusion', function () {
   });
 
   it(`should not include (return 404) for block ${NON_EXISTANT_BLOCK_NUMBER}`, async function () {
-    const res = await request(app).get(
-      `/api/v1/matic/block-included/${NON_EXISTANT_BLOCK_NUMBER}`,
-    );
+    const res = await request(app).get(`/api/v1/matic/block-included/${NON_EXISTANT_BLOCK_NUMBER}`);
 
     expect(res).property('status', 404);
     expect(res).property('body').property('error', true);

@@ -1,11 +1,7 @@
 import type { LoggerOptions, Logger } from 'winston';
 
 import * as Sentry from '@sentry/node';
-import {
-  createLogger as createWinstonLogger,
-  format,
-  transports,
-} from 'winston';
+import { createLogger as createWinstonLogger, format, transports } from 'winston';
 import Transport from 'winston-transport';
 
 import { env } from './env.ts';
@@ -24,21 +20,17 @@ class SentryTransport extends Transport {
 
   override log(
     info: { error?: unknown; err?: unknown; message?: unknown },
-    callback: () => void,
+    callback: () => void
   ): void {
     setImmediate(() => this.emit('logged', info));
     const err =
-      info.error instanceof Error
-        ? info.error
-        : info.err instanceof Error
-          ? info.err
-          : undefined;
+      info.error instanceof Error ? info.error : info.err instanceof Error ? info.err : undefined;
     if (err) {
       Sentry.captureException(err);
     } else {
       Sentry.captureMessage(
         typeof info.message === 'string' ? info.message : JSON.stringify(info),
-        'error',
+        'error'
       );
     }
     callback();
@@ -54,19 +46,16 @@ export function createLogger(config?: LoggerOptions) {
     formats.push(
       colorize({
         all: true,
-        level: true,
-      }),
+        level: true
+      })
     );
   }
 
   return createWinstonLogger({
     format: combine(...formats),
-    transports: [
-      new transports.Console(),
-      ...(env.SENTRY_DSN ? [new SentryTransport()] : []),
-    ],
+    transports: [new transports.Console(), ...(env.SENTRY_DSN ? [new SentryTransport()] : [])],
     level: 'debug',
-    ...config,
+    ...config
   });
 }
 
@@ -75,7 +64,7 @@ let logger: Logger;
 export function getLogger(config?: LoggerOptions) {
   if (config && logger) {
     throw new Error(
-      'Logger singleton already created; cannot set config (use `addXXXXX` methods on `getLogger()` result instead.',
+      'Logger singleton already created; cannot set config (use `addXXXXX` methods on `getLogger()` result instead.'
     );
   }
 

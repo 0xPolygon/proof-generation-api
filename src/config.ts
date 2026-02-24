@@ -10,11 +10,11 @@ const config = {
     amoyRPC: env.AMOY_RPC,
     zkEVMMainnetURL: env.ZKEVM_MAINNET_URL,
     zkEVMTestnetURL: env.ZKEVM_TESTNET_URL,
-    xERPCSecretToken: env.ERPC_SECRET_TOKEN,
+    xERPCSecretToken: env.ERPC_SECRET_TOKEN
   },
   debug: env.NODE_ENV !== 'production',
   mainnetRpcIndex: 0,
-  testnetRpcIndex: 0,
+  testnetRpcIndex: 0
 };
 
 export { config };

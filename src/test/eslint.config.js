@@ -8,8 +8,8 @@ export default [
     files: ['**/*.ts'],
     languageOptions: {
       globals: {
-        ...globals.mocha,
-      },
-    },
-  },
+        ...globals.mocha
+      }
+    }
+  }
 ];

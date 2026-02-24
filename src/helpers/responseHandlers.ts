@@ -14,11 +14,7 @@ interface ErrorParams {
 }
 
 // successful response
-export const handleResponse = ({
-  res,
-  data,
-  statusCode = 200,
-}: ResponseParams) => {
+export const handleResponse = ({ res, data, statusCode = 200 }: ResponseParams) => {
   return res.status(statusCode).json(data);
 };
 
@@ -27,11 +23,11 @@ export const handleInvalidEndpoint = ({
   res,
   statusCode = 404,
   errMsg = 'Not Found',
-  err = 'Endpoint Not found',
+  err = 'Endpoint Not found'
 }: ErrorParams) => {
   return res.status(statusCode).json({
     errMsg,
-    msg: err instanceof Error ? err.message : err?.toString() || errMsg,
+    msg: err instanceof Error ? err.message : err?.toString() || errMsg
   });
 };
 
@@ -40,11 +36,11 @@ export const handleBadRequest = ({
   res,
   statusCode = 400,
   errMsg = 'Bad Request',
-  err = 'Bad Request',
+  err = 'Bad Request'
 }: ErrorParams) => {
   return res.status(statusCode).json({
     error: true,
-    msg: err instanceof Error ? err.message : errMsg || err?.toString(),
+    msg: err instanceof Error ? err.message : errMsg || err?.toString()
   });
 };
 
@@ -55,10 +51,10 @@ export const handleError = ({
   res,
   statusCode = 500,
   errMsg = 'Something went wrong while computing',
-  err = 'error',
+  err = 'error'
 }: ErrorParams) => {
   return res.status(statusCode).json({
     error: true,
-    message: err instanceof Error ? err.message : errMsg || err?.toString(),
+    message: err instanceof Error ? err.message : errMsg || err?.toString()
   });
 };

@@ -7,6 +7,6 @@ import { env } from './env.ts';
 if (env.SENTRY_DSN) {
   Sentry.init({
     dsn: env.SENTRY_DSN,
-    environment: env.NODE_ENV,
+    environment: env.NODE_ENV
   });
 }

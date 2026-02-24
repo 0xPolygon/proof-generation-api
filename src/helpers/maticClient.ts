@@ -19,7 +19,7 @@ export const initMatic = async (
   isMainnet: boolean,
   version: string,
   maticRPC: string,
-  ethereumRPC: string,
+  ethereumRPC: string
 ) => {
   const _network = isMainnet ? 'mainnet' : 'testnet';
 
@@ -32,12 +32,12 @@ export const initMatic = async (
         headers: {
           ...(config.app.xERPCSecretToken
             ? { 'X-ERPC-Secret-Token': config.app.xERPCSecretToken }
-            : {}),
-        },
+            : {})
+        }
       }),
       defaultConfig: {
-        from: '0x54d03EC0C462e9a01F77579C090cdE0FC2617817',
-      },
+        from: '0x54d03EC0C462e9a01F77579C090cdE0FC2617817'
+      }
     },
     child: {
       provider: new providers.JsonRpcProvider({
@@ -45,14 +45,14 @@ export const initMatic = async (
         headers: {
           ...(config.app.xERPCSecretToken
             ? { 'X-ERPC-Secret-Token': config.app.xERPCSecretToken }
-            : {}),
-        },
+            : {})
+        }
       }),
       defaultConfig: {
-        from: '0x54d03EC0C462e9a01F77579C090cdE0FC2617817',
-      },
+        from: '0x54d03EC0C462e9a01F77579C090cdE0FC2617817'
+      }
     },
-    rootChainDefaultBlock: 'latest',
+    rootChainDefaultBlock: 'latest'
   };
   const posClient = new POSClient();
   await posClient.init(maticConfig);

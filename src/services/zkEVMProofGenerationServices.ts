@@ -25,21 +25,17 @@ function getBridgeAPIUrl(network: string) {
  * @param {string} network
  * @returns
  */
-export async function bridge(
-  networkID: number,
-  depositCount: number,
-  network: string,
-) {
+export async function bridge(networkID: number, depositCount: number, network: string) {
   const zkEVMURL = getBridgeAPIUrl(network);
 
   const response = await fetch(
-    `${zkEVMURL}/bridge?net_id=${networkID}&deposit_cnt=${depositCount}`,
+    `${zkEVMURL}/bridge?net_id=${networkID}&deposit_cnt=${depositCount}`
   );
   const data: any = await response.json();
 
   if (response.status !== 200) {
     logger.info(
-      `Error hitting ${zkEVMURL} bridge with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(data)}`,
+      `Error hitting ${zkEVMURL} bridge with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(data)}`
     );
     throw new InfoError(errorTypes.ZKEVMError, data.message);
   }
@@ -56,18 +52,18 @@ export async function bridge(
 export async function merkelProofGenerator(
   networkID: number,
   depositCount: number,
-  network: string,
+  network: string
 ) {
   const zkEVMURL = getBridgeAPIUrl(network);
 
   const response = await fetch(
-    `${zkEVMURL}/merkle-proof?net_id=${networkID}&deposit_cnt=${depositCount}`,
+    `${zkEVMURL}/merkle-proof?net_id=${networkID}&deposit_cnt=${depositCount}`
   );
   const data: any = await response.json();
 
   if (response.status !== 200) {
     logger.info(
-      `Error hitting ${zkEVMURL} merkle proof with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(data)}`,
+      `Error hitting ${zkEVMURL} merkle proof with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(data)}`
     );
     throw new InfoError(errorTypes.ZKEVMError, data.message);
   }

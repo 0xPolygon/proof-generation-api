@@ -29,8 +29,8 @@ export function getExpressApp() {
 export async function startApiServer(
   { port, app }: { port: number; app: Express } = {
     port: env.PORT,
-    app: getExpressApp(),
-  },
+    app: getExpressApp()
+  }
 ): Promise<void> {
   // Bubble errors calling `listen()` up to callers so they get an async stack trace
   await new Promise((resolve, reject) => {

@@ -8,13 +8,10 @@ import { z } from 'zod';
 const isHttpsJsonStringArray = (val: string, ctx: z.RefinementCtx) => {
   try {
     const parsed = JSON.parse(val);
-    if (
-      !Array.isArray(parsed) ||
-      !parsed.every((item) => typeof item === 'string')
-    ) {
+    if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === 'string')) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'Must be a valid JSON string array.',
+        message: 'Must be a valid JSON string array.'
       });
       return z.NEVER;
     }
@@ -25,7 +22,7 @@ const isHttpsJsonStringArray = (val: string, ctx: z.RefinementCtx) => {
       } catch {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Contains an invalid URL: "${url}"`,
+          message: `Contains an invalid URL: "${url}"`
         });
         return z.NEVER;
       }
@@ -33,7 +30,7 @@ const isHttpsJsonStringArray = (val: string, ctx: z.RefinementCtx) => {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           // Log only the origin — never the full URL, which may contain secret tokens.
-          message: `Contains a non-HTTPS URL: "${u.origin}". All RPC endpoints must use https://.`,
+          message: `Contains a non-HTTPS URL: "${u.origin}". All RPC endpoints must use https://.`
         });
         return z.NEVER;
       }
@@ -42,27 +39,14 @@ const isHttpsJsonStringArray = (val: string, ctx: z.RefinementCtx) => {
   } catch {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: 'Must be valid JSON.',
+      message: 'Must be valid JSON.'
     });
     return z.NEVER;
   }
 };
 
 // Ref: https://github.com/t3-oss/t3-env/pull/145
-const booleanStrings = [
-  'true',
-  'false',
-  true,
-  false,
-  '1',
-  '0',
-  'yes',
-  'no',
-  'y',
-  'n',
-  'on',
-  'off',
-];
+const booleanStrings = ['true', 'false', true, false, '1', '0', 'yes', 'no', 'y', 'n', 'on', 'off'];
 
 const BooleanOrBooleanStringSchema = z
   .any()
@@ -80,9 +64,7 @@ const BooleanOrBooleanStringSchema = z
 
 export const env = createEnv({
   server: {
-    NODE_ENV: z
-      .enum(['development', 'test', 'production'])
-      .default('development'),
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     NAME: z.string().default('Proof Generation API'),
     PORT: z.coerce.number().default(5000),
     ETHEREUM_RPC: z.string().transform(isHttpsJsonStringArray),
@@ -93,8 +75,8 @@ export const env = createEnv({
     ZKEVM_TESTNET_URL: z.string(),
     ERPC_SECRET_TOKEN: z.string().optional(),
     SENTRY_DSN: z.string().optional(),
-    PRETTY_LOGS: BooleanOrBooleanStringSchema.default(false),
+    PRETTY_LOGS: BooleanOrBooleanStringSchema.default(false)
   },
   runtimeEnv: process.env,
-  emptyStringAsUndefined: true,
+  emptyStringAsUndefined: true
 });

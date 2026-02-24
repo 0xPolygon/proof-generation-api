@@ -2,9 +2,6 @@ export {
   isBlockIncluded,
   fastMerkleProof,
   generateExitPayload,
-  generateAllExitPayloads,
+  generateAllExitPayloads
 } from './v1ProofGenerationServices.ts';
-export {
-  bridge,
-  merkelProofGenerator,
-} from './zkEVMProofGenerationServices.ts';
+export { bridge, merkelProofGenerator } from './zkEVMProofGenerationServices.ts';

@@ -4,7 +4,7 @@ export const errorTypes = {
   BlockNotIncluded: 'no_block_found',
   IncorrectTx: 'incorrect_transaction',
   TxNotCheckpointed: 'transaction_not_checkpointed',
-  ZKEVMError: 'zkevm_bridge_data_error',
+  ZKEVMError: 'zkevm_bridge_data_error'
 };
 
 // FIXME: Import from servercore once we get servercore directory imports fixed
@@ -14,7 +14,7 @@ export const serverCoreErrorCodes = {
 
   // Consumer related error codes
   consumer: {
-    UNKNOWN_CONSUMER_ERR: 1000,
+    UNKNOWN_CONSUMER_ERR: 1000
   },
 
   // Datastore related error codes
@@ -22,12 +22,12 @@ export const serverCoreErrorCodes = {
     UNKNOWN_DATASTORE_ERR: 2000,
     DATASTORE_AUTH_ERR: 2001,
     DATASTORE_READ_ERROR: 2002,
-    DATASTORE_WRITE_ERROR: 2003,
+    DATASTORE_WRITE_ERROR: 2003
   },
 
   // External dependencies errors codes
   external: {
-    UNKNOWN_EXTERNAL_DEPENDENCY_ERROR: 3000,
+    UNKNOWN_EXTERNAL_DEPENDENCY_ERROR: 3000
   },
 
   // API related error codes
@@ -39,6 +39,6 @@ export const serverCoreErrorCodes = {
     TOO_MANY_REQUESTS: 429,
     INTERNAL_SERVER_ERROR: 500,
     GATEWAY_ERROR: 502,
-    TIMEOUT_ERROR: 504,
-  },
+    TIMEOUT_ERROR: 504
+  }
 };

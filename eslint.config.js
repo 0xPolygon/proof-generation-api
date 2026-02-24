@@ -7,7 +7,7 @@ import prettierConfig from 'eslint-config-prettier';
 const internalPattern = '^@polygonlabs/';
 export default tseslint.config(
   {
-    ignores: ['**/dist', '**/generated/**', '**/docs/html/**/*'],
+    ignores: ['**/dist', '**/generated/**', '**/docs/html/**/*']
   },
   tseslint.configs.base,
   tseslint.configs.eslintRecommended,
@@ -15,7 +15,7 @@ export default tseslint.config(
   {
     files: ['**/*.ts', '**/*.tsx', '**/*.mjs'],
     plugins: {
-      perfectionist,
+      perfectionist
     },
     rules: {
       'perfectionist/sort-imports': [
@@ -32,36 +32,36 @@ export default tseslint.config(
             ['type-parent', 'type-sibling', 'type-index'],
             ['value-parent', 'value-sibling', 'value-index'],
             'ts-equals-import',
-            'unknown',
-          ],
-        },
-      ],
-    },
+            'unknown'
+          ]
+        }
+      ]
+    }
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
-    ...pluginImportX.flatConfigs.recommended,
+    ...pluginImportX.flatConfigs.recommended
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
-    ...pluginImportX.flatConfigs.typescript,
+    ...pluginImportX.flatConfigs.typescript
   },
   {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
       globals: {
-        ...globals.node,
+        ...globals.node
       },
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
+        tsconfigRootDir: import.meta.dirname
+      }
     },
     settings: {
       'import-x/resolver': {
-        typescript: true,
+        typescript: true
       },
-      'import/internal-regex': internalPattern,
+      'import/internal-regex': internalPattern
     },
     rules: {
       '@typescript-eslint/consistent-type-imports': ['error'],
@@ -76,8 +76,8 @@ export default tseslint.config(
       'no-await-in-loop': 'off',
       'no-param-reassign': 'error',
       'no-underscore-dangle': ['off'],
-      'no-useless-escape': 'off',
-    },
+      'no-useless-escape': 'off'
+    }
   },
-  prettierConfig,
+  prettierConfig
 );

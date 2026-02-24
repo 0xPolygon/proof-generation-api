@@ -155,7 +155,7 @@ it('should include block {N}', async () => {
 ```typescript
 it('should return merkle proof for block {N} in range [{start}, {end}]', async () => {
   const res = await request(app).get(
-    '/api/v1/matic/fast-merkle-proof?start={start}&end={end}&number={N}',
+    '/api/v1/matic/fast-merkle-proof?start={start}&end={end}&number={N}'
   );
   expect(res).property('status', 200);
   expect(res).property('body').property('proof', '{0x...captured_proof_value}');
@@ -271,7 +271,7 @@ If `tokenIndex` equals or exceeds the number of matching events, the service ret
 ```typescript
 it('ERC-20 exit payload test', async function () {
   const res = await request(app).get(
-    '/api/v1/matic/exit-payload/{txHash}?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+    '/api/v1/matic/exit-payload/{txHash}?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
   );
   expect(res).property('status', 200);
   expect(res).property('body').property('result', '{0x...pinned_payload}');
@@ -322,7 +322,7 @@ Same requirements as `exit-payload`, but ideally the target transaction should c
 ```typescript
 it('ERC-721 batch exit payloads test ({N} tokens)', async function () {
   const res = await request(app).get(
-    '/api/v1/matic/all-exit-payloads/{txHash}?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+    '/api/v1/matic/all-exit-payloads/{txHash}?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
   );
   expect(res).property('status', 200);
   expect(res).property('body').property('result').property('length', { N });
@@ -358,14 +358,12 @@ The `deposit` object fields are stable and safe to pin: `tx_hash`, `deposit_cnt`
 
 ```typescript
 it('zkEVM bridge deposit lookup', async function () {
-  const res = await request(app).get(
-    '/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1',
-  );
+  const res = await request(app).get('/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1');
   expect(res).property('status', 200);
   expect(res.body).to.have.property('deposit');
   expect(res.body.deposit).to.have.property(
     'tx_hash',
-    '0xb07cd0b30019c78c0b60e464c7c38a0a8076a355dbe9177205573e86455f31b6',
+    '0xb07cd0b30019c78c0b60e464c7c38a0a8076a355dbe9177205573e86455f31b6'
   );
   expect(res.body.deposit).to.have.property('deposit_cnt', 1);
   expect(res.body.deposit).to.have.property('ready_for_claim', true);
@@ -429,9 +427,7 @@ Once you have found a valid URL via the production service:
 it('{description} — {tokenType} — {brief description}', async function () {
   this.timeout(30000); // RPC calls can take up to 15s
 
-  const res = await request(app).get(
-    '/api/v1/matic/exit-payload/{txHash}?eventSignature={sig}',
-  );
+  const res = await request(app).get('/api/v1/matic/exit-payload/{txHash}?eventSignature={sig}');
 
   expect(res).property('status', 200);
   expect(res).property('body').property('result', '{pinned_result_value}');
