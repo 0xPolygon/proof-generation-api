@@ -10,7 +10,7 @@ import {
   fastMerkleProof,
   generateExitPayload,
   generateAllExitPayloads
-} from '../services/index.ts';
+} from '../services/v1ProofGenerationServices.ts';
 import { isInteger } from './utils.ts';
 
 const logger = getLogger();

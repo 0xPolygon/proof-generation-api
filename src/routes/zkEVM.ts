@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { InfoError } from '../helpers/errorHelper.ts';
 import { handleBadRequest, handleError, handleResponse } from '../helpers/responseHandlers.ts';
 import { getLogger } from '../logger.ts';
-import { bridge, merkelProofGenerator } from '../services/index.ts';
+import { bridge, merkelProofGenerator } from '../services/zkEVMProofGenerationServices.ts';
 import { isInteger } from './utils.ts';
 
 const router = Router();
