@@ -8,8 +8,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit --skipLibCheck",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
+    "format": "eslint . --fix && prettier --write .",
     "test": "mocha",
     "start": "node src/bin/apiServer.ts",
     "dev": "dotenvx run -- nodemon -x \"node\" src/bin/apiServer.ts",
@@ -48,6 +47,7 @@
   "dependencies": {
     "@maticnetwork/maticjs": "3.9.6",
     "@maticnetwork/maticjs-ethers": "^1.1.0",
+    "@sentry/node": "^10.39.0",
     "@t3-oss/env-core": "^0.13.10",
     "@types/winston": "^2.4.4",
     "cors": "^2.8.5",
