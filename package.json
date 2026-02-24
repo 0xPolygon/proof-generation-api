@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "typecheck": "tsc --noEmit --skipLibCheck",
-    "lint": "eslint .",
+    "lint": "eslint . && npm run typecheck",
     "format": "eslint . --fix && prettier --write .",
     "test": "mocha",
     "start": "node src/bin/apiServer.ts",
@@ -53,6 +53,6 @@
     "ethers": "5.5.1",
     "express": "^5.2.1",
     "winston": "^3.19.0",
-    "zod": "^3.25.76"
+    "zod": "^4.3.6"
   }
 }
