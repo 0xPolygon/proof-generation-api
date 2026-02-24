@@ -429,7 +429,16 @@ export async function generateAllExitPayloads(
           eventSignature,
           false,
         );
-      } catch {
+      } catch (buildError: any) {
+        logger.warn({
+          location: 'v1ProofGenerationServices.generateAllExitPayloads',
+          message: 'buildMultiplePayloadsForExit failed',
+          attempt: i + 1,
+          maticRpcOrigin: rpcOrigin(maticRPCUrl),
+          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+          buildErrorMessage: buildError?.message,
+          buildErrorName: buildError?.name,
+        });
         if (i === maxRetries - 1) {
           throw new InfoError(
             errorTypes.BlockNotIncluded,
