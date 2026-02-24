@@ -6,6 +6,16 @@ import { getLogger } from '../logger.ts';
 
 const logger = getLogger();
 
+// Returns only the protocol+host of an RPC URL so that secret tokens in query
+// params are never written to logs.
+function rpcOrigin(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return '[unparseable URL]';
+  }
+}
+
 const mainnetRPCLength = config.app.maticRPC.length; // total mainnet rpcs
 const mainnetMaxRetries = 2 * mainnetRPCLength; // max mainnet retries
 const testnetAmoyRPCLength = config.app.amoyRPC.length; // total amoy testnet rpcs
@@ -114,6 +124,17 @@ export async function isBlockIncluded(
       if (error.type === errorTypes.BlockNotIncluded || i === maxRetries - 1) {
         throw error;
       }
+      logger.warn({
+        location: 'v1ProofGenerationServices.isBlockIncluded',
+        message: 'RPC attempt failed, retrying',
+        maticRpcOrigin: rpcOrigin(maticRPCUrl),
+        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+        attempt: i + 1,
+        maxRetries,
+        errorEvent: error?.event,
+        errorCode: error?.code,
+        errorMessage: error?.message,
+      });
       await new Promise((r) => setTimeout(r, 1000));
     }
   }
@@ -168,10 +189,21 @@ export async function fastMerkleProof(
       proof = await maticClient.exitUtil.getBlockProof(number, { start, end });
 
       break;
-    } catch (error) {
+    } catch (error: any) {
       if (i === maxRetries - 1) {
         throw error;
       }
+      logger.warn({
+        location: 'v1ProofGenerationServices.fastMerkleProof',
+        message: 'RPC attempt failed, retrying',
+        maticRpcOrigin: rpcOrigin(maticRPCUrl),
+        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+        attempt: i + 1,
+        maxRetries,
+        errorEvent: error?.event,
+        errorCode: error?.code,
+        errorMessage: error?.message,
+      });
       await new Promise((r) => setTimeout(r, 1000));
     }
   }
@@ -277,11 +309,6 @@ export async function generateExitPayload(
           tokenIndex,
         );
       } catch (error: any) {
-        logger.info({
-          location: 'v1ProofGenerationServices.generateExitPayload',
-          call: 'catch error',
-          error,
-        });
         if (
           error.message ===
           'Index is greater than the number of tokens in this transaction'
@@ -311,6 +338,17 @@ export async function generateExitPayload(
       ) {
         throw error;
       }
+      logger.warn({
+        location: 'v1ProofGenerationServices.generateExitPayload',
+        message: 'RPC attempt failed, retrying',
+        maticRpcOrigin: rpcOrigin(maticRPCUrl),
+        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+        attempt: i + 1,
+        maxRetries,
+        errorEvent: error?.event,
+        errorCode: error?.code,
+        errorMessage: error?.message,
+      });
       await new Promise((r) => setTimeout(r, 1000));
     }
   }
@@ -368,8 +406,7 @@ export async function generateAllExitPayloads(
         logger.info(`Checking for checkpoint status ${safeBurnTxHash}`);
         isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
         logger.info({ isCheckpointed: isCheckpointed });
-      } catch (error) {
-        logger.info({ error });
+      } catch {
         if (i === maxRetries - 1) {
           throw new InfoError(
             errorTypes.IncorrectTx,
@@ -392,7 +429,6 @@ export async function generateAllExitPayloads(
           eventSignature,
           false,
         );
-        // FIXME: error is not logged?!
       } catch {
         if (i === maxRetries - 1) {
           throw new InfoError(
@@ -409,15 +445,32 @@ export async function generateAllExitPayloads(
 
       break;
     } catch (error: any) {
-      logger.error({ error });
       if (
         error.type === errorTypes.TxNotCheckpointed ||
         error.type === errorTypes.IncorrectTx ||
         error.type === errorTypes.BlockNotIncluded ||
         i === maxRetries - 1
       ) {
+        logger.error({
+          location: 'v1ProofGenerationServices.generateAllExitPayloads',
+          message: 'All RPC retries exhausted or non-retryable error',
+          errorEvent: error?.event,
+          errorCode: error?.code,
+          errorMessage: error?.message,
+        });
         throw error;
       }
+      logger.warn({
+        location: 'v1ProofGenerationServices.generateAllExitPayloads',
+        message: 'RPC attempt failed, retrying',
+        maticRpcOrigin: rpcOrigin(maticRPCUrl),
+        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+        attempt: i + 1,
+        maxRetries,
+        errorEvent: error?.event,
+        errorCode: error?.code,
+        errorMessage: error?.message,
+      });
       await new Promise((r) => setTimeout(r, 1000));
     }
   }
