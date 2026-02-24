@@ -22,7 +22,10 @@ class SentryTransport extends Transport {
     super({ level: 'error' });
   }
 
-  override log(info: any, callback: () => void): void {
+  override log(
+    info: { error?: unknown; err?: unknown; message?: unknown },
+    callback: () => void,
+  ): void {
     setImmediate(() => this.emit('logged', info));
     const err =
       info.error instanceof Error
@@ -62,8 +65,8 @@ export function createLogger(config?: LoggerOptions) {
       new transports.Console(),
       ...(env.SENTRY_DSN ? [new SentryTransport()] : []),
     ],
-    ...config,
     level: 'debug',
+    ...config,
   });
 }
 
