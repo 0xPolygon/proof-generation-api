@@ -44,6 +44,19 @@ The burn transaction **must be checkpointed** before a proof can be generated. C
 
 ---
 
+## Endpoint variants: `matic` vs `amoy`
+
+Most endpoints exist in two network variants:
+
+| Network             | URL prefix       | Chain                      | Explorer                     |
+| ------------------- | ---------------- | -------------------------- | ---------------------------- |
+| Polygon PoS mainnet | `/api/v1/matic/` | Polygon (chain 137)        | https://polygonscan.com      |
+| Amoy testnet        | `/api/v1/amoy/`  | Polygon Amoy (chain 80002) | https://amoy.polygonscan.com |
+
+All discovery and validation steps described in this runbook apply to both. To find valid Amoy testnet burn transactions, follow the same steps as mainnet but use **https://amoy.polygonscan.com** and the Amoy child token addresses. Old Amoy blocks (e.g., block 1234) are always checkpointed, just like mainnet.
+
+---
+
 ## Endpoint 1: `block-included`
 
 **URL pattern:** `GET /api/v1/matic/block-included/{blockNumber}`
@@ -74,6 +87,8 @@ Any block older than ~1 hour is guaranteed to be checkpointed. Block numbers 1�
 
 5. **Capture the full response** and record the `start`, `end`, and `headerBlockNumber` values — you will need them for the `fast-merkle-proof` endpoint.
 
+> **Response format note:** `headerBlockNumber` is a **hex string** (e.g., `"0xea60"` for mainnet block 1234, `"0x9c40"` for amoy block 1234). `start`, `end`, and `createdAt` are returned as `{ "type": "BigNumber", "hex": "0x..." }` objects — do not pin these directly.
+
 ### Pinning the test case
 
 ```typescript
@@ -81,12 +96,12 @@ it('should include block {N}', async () => {
   const res = await request(app).get('/api/v1/matic/block-included/{N}');
   expect(res).property('status', 200);
   expect(res).property('body').property('message', 'success');
-  // Optionally pin specific fields:
-  expect(res).property('body').property('headerBlockNumber', '{value}');
+  // Pin the header block number (a hex string):
+  expect(res).property('body').property('headerBlockNumber', '{hex_value}');
 });
 ```
 
-> **Tip:** Do not pin `createdAt` or `proposer` — these may change if the service upgrades its data source. `headerBlockNumber`, `start`, `end`, and `root` are stable.
+> **Tip:** Do not pin `createdAt`, `proposer`, `start`, or `end`. `headerBlockNumber` (hex string) is stable and safe to pin.
 
 ### Datadog synthetic monitor
 
@@ -263,7 +278,7 @@ it('ERC-20 exit payload test', async function () {
 });
 ```
 
-> **Important:** The `result` value is deterministic for a given burn tx. Once pinned, it will not change. Do not attempt to re-generate it — the whole point is that the service always returns the same proof for the same input.
+> **Important — determinism caveat:** ERC-20 and ERC-721 exit payloads are fully deterministic for a given burn tx. However, **ERC-1155 (and some other) payloads may differ slightly between RPC providers**. This is because `maticjs` generates the Merkle proof against the Ethereum RPC's current best block, and different providers can return different best blocks, producing proofs of different lengths. **Always pin the value returned by your locally configured RPC**, not the one returned by production. The value is stable for a given RPC endpoint over time.
 
 ### Datadog synthetic monitor
 
@@ -326,28 +341,34 @@ it('ERC-721 batch exit payloads test ({N} tokens)', async function () {
 
 The zkEVM bridge uses a deposit counter model. Each deposit gets an incrementing integer index.
 
-1. Go to https://bridge.zkevm-rpc.com (zkEVM bridge UI) or the Polygon zkEVM block explorer
-2. Make a small test deposit through the bridge UI to get a `deposit_cnt`
-3. Alternatively, query the bridge API directly to find an existing deposit:
-   - `net_id=0` = Ethereum L1
-   - `net_id=1` = Polygon zkEVM L2
-4. Validate:
-   ```sh
-   curl "https://proof-generator.polygon.technology/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1"
-   ```
-5. An HTTP 200 with a populated JSON body confirms validity
+- **`net_id=0`** = Ethereum L1 (deposits FROM Ethereum TO zkEVM)
+- **`net_id=1`** = Polygon zkEVM L2 (deposits FROM zkEVM TO Ethereum)
+
+**Known-good starting point:** `net_id=1&deposit_cnt=1` is the very first deposit ever made to the zkEVM mainnet bridge. It is always valid and has been ready-to-claim since bridge launch. This is the recommended value for integration tests.
+
+Validate:
+
+```sh
+curl "https://proof-generator.polygon.technology/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1"
+```
 
 ### Pinning the test case
 
-Pin `status = 200` and the presence of key fields. Do not pin the entire body as it may include timestamps.
+The `deposit` object fields are stable and safe to pin: `tx_hash`, `deposit_cnt`, `network_id`, `ready_for_claim`. Do **not** pin `block_num` or `claim_tx_hash` as these might change format in API updates.
 
 ```typescript
 it('zkEVM bridge deposit lookup', async function () {
   const res = await request(app).get(
-    '/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt={N}',
+    '/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1',
   );
   expect(res).property('status', 200);
   expect(res.body).to.have.property('deposit');
+  expect(res.body.deposit).to.have.property(
+    'tx_hash',
+    '0xb07cd0b30019c78c0b60e464c7c38a0a8076a355dbe9177205573e86455f31b6',
+  );
+  expect(res.body.deposit).to.have.property('deposit_cnt', 1);
+  expect(res.body.deposit).to.have.property('ready_for_claim', true);
 });
 ```
 
@@ -363,14 +384,17 @@ it('zkEVM bridge deposit lookup', async function () {
 
 Same as the `bridge` endpoint — use the same `net_id` and `deposit_cnt`. The deposit must be **ready to claim** (included in the Merkle tree, bridge state synced). An early-stage deposit may return an error from the external API.
 
-### Step-by-step
+Use `net_id=1&deposit_cnt=1` as the known-good starting point (same as the `bridge` endpoint).
 
-1. Find a deposit using the same process as the `bridge` endpoint
-2. Validate:
-   ```sh
-   curl "https://proof-generator.polygon.technology/api/zkevm/mainnet/merkle-proof?net_id=1&deposit_cnt={N}"
-   ```
-3. Confirm HTTP 200 and a populated `proof` object in the response
+Validate:
+
+```sh
+curl "https://proof-generator.polygon.technology/api/zkevm/mainnet/merkle-proof?net_id=1&deposit_cnt=1"
+```
+
+> **What to pin:** The response includes `proof.merkle_proof` (array of sibling hashes) and `proof.rollup_merkle_proof`. Do **not** pin `proof.main_exit_root` or `proof.rollup_exit_root` — these represent the **current** state of the bridge Merkle tree and change as new deposits are added. Pin only that the `proof` field is present and that `proof.merkle_proof` is a non-empty array.
+
+Confirm HTTP 200 and a populated `proof` object with a non-empty `merkle_proof` array.
 
 ---
 
@@ -379,12 +403,25 @@ Same as the `bridge` endpoint — use the same `net_id` and `deposit_cnt`. The d
 Once you have found a valid URL via the production service:
 
 1. **Validate the full response body** using `curl` with a pretty-printer:
+
    ```sh
    curl "https://proof-generator.polygon.technology/api/v1/matic/exit-payload/{txHash}?eventSignature={sig}" | python3 -m json.tool
    ```
-2. **Note the exact `result` field value** — copy it exactly (including the `0x` prefix)
-3. **Add the test** in `src/test/api_test.ts` following existing patterns
-4. **Run `npm test`** to confirm the test passes locally before committing
+
+2. **Extract the `result` field value to a file** — exit payload hex strings can exceed 5000 characters, which will be silently truncated by terminal output limits if you print them to stdout. **Always write to a file instead:**
+
+   ```sh
+   curl "..." | python3 -c "import json,sys; open('/tmp/result.txt','w').write(json.load(sys.stdin)['result'])"
+   cat /tmp/result.txt
+   ```
+
+   Copying from a `print()` or `echo` output that was scrolled or piped will silently truncate the value, causing the pinned assertion to fail with a cryptic length mismatch.
+
+3. **Pin the LOCAL service's value, not production.** The integration tests run against the locally configured RPCs, which may produce slightly different proof bytes than production for some token types (ERC-1155 in particular). Get the correct value to pin by running the test once, reading the failure diff's "actual" value, and using that as the pinned assertion.
+
+4. **Add the test** in `src/test/api_test.ts` following existing patterns.
+
+5. **Run `npm test`** to confirm the test passes locally before committing.
 
 ### Test case template
 
@@ -407,16 +444,17 @@ it('{description} — {tokenType} — {brief description}', async function () {
 
 ### Recommended monitor suite
 
-| Endpoint                  | URL                                                               | What to assert                            | Poll frequency |
-| ------------------------- | ----------------------------------------------------------------- | ----------------------------------------- | -------------- |
-| `health-check`            | `/health-check`                                                   | status=200                                | 1 min          |
-| `block-included`          | `/api/v1/matic/block-included/1234`                               | status=200, body has `message:success`    | 5 min          |
-| `fast-merkle-proof`       | `/api/v1/matic/fast-merkle-proof?start=...`                       | status=200, body has `proof` field        | 5 min          |
-| `exit-payload (ERC-20)`   | `/api/v1/matic/exit-payload/{tx}?eventSignature=0xddf252...`      | status=200, `result` matches pinned value | 10 min         |
-| `exit-payload (ERC-1155)` | `/api/v1/matic/exit-payload/{tx}?eventSignature=0x4a39dc...`      | status=200, `result` is non-empty         | 10 min         |
-| `all-exit-payloads`       | `/api/v1/matic/all-exit-payloads/{tx}?eventSignature=0xddf252...` | status=200, `result.length` = N           | 10 min         |
-| `zkEVM bridge`            | `/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=N`                | status=200, `deposit` field present       | 10 min         |
-| `zkEVM merkle-proof`      | `/api/zkevm/mainnet/merkle-proof?net_id=1&deposit_cnt=N`          | status=200, `proof` field present         | 10 min         |
+| Endpoint                   | URL                                                                  | What to assert                                | Poll frequency |
+| -------------------------- | -------------------------------------------------------------------- | --------------------------------------------- | -------------- |
+| `health-check`             | `/health-check`                                                      | status=200                                    | 1 min          |
+| `block-included` (mainnet) | `/api/v1/matic/block-included/1234`                                  | status=200, `headerBlockNumber`=`0xea60`      | 5 min          |
+| `block-included` (amoy)    | `/api/v1/amoy/block-included/1234`                                   | status=200, `headerBlockNumber`=`0x9c40`      | 5 min          |
+| `fast-merkle-proof`        | `/api/v1/matic/fast-merkle-proof?start=12345&end=12347&number=12346` | status=200, `proof` matches pinned value      | 5 min          |
+| `exit-payload (ERC-20)`    | `/api/v1/matic/exit-payload/{tx}?eventSignature=0xddf252...`         | status=200, `result` matches pinned value     | 10 min         |
+| `exit-payload (ERC-1155)`  | `/api/v1/matic/exit-payload/{tx}?eventSignature=0x4a39dc...`         | status=200, `result` is non-empty             | 10 min         |
+| `all-exit-payloads`        | `/api/v1/matic/all-exit-payloads/{tx}?eventSignature=0xddf252...`    | status=200, `result.length` = N               | 10 min         |
+| `zkEVM bridge`             | `/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1`                   | status=200, `deposit.tx_hash` matches pinned  | 10 min         |
+| `zkEVM merkle-proof`       | `/api/zkevm/mainnet/merkle-proof?net_id=1&deposit_cnt=1`             | status=200, `proof.merkle_proof` is non-empty | 10 min         |
 
 ### Alert thresholds
 
@@ -428,15 +466,18 @@ it('{description} — {tokenType} — {brief description}', async function () {
 
 ## Reference: Currently Known-Good Test Cases
 
-| Endpoint                            | Input                                                                                             | Expected                  | Notes                                          |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------- |
-| `block-included`                    | block `1234`                                                                                      | 200, message=success      | Very old Polygon block, always checkpointed    |
-| `fast-merkle-proof`                 | start=12345 end=12347 number=12346                                                                | 200, proof=`0xc622...`    | Three consecutive blocks within one checkpoint |
-| `exit-payload`                      | `0x1a7b6aba7e51344474d4fe722a3969e8c7a863c72329210a0dda80d26c4234b4` + ERC-20 sig                 | 200, result=`0xf90a24...` | ERC-20 burn tx, checkpointed mainnet           |
-| `exit-payload`                      | same tx + tokenIndex=0                                                                            | 200, same result          | Explicit index 0 is same as default            |
-| `exit-payload (ERC-1155)`           | `0x4d4a9ee49a681a97ade92788f2fdce1d1761978ab491c2a10eb6849101cd63fe` + ERC-1155 TransferBatch sig | 200                       | ERC-1155 TransferBatch event                   |
-| `all-exit-payloads`                 | `0xdc3e4c2d41edd8c0a059be22aaa48ee6649f3688456db234b7e382e1cf735b50` + ERC-20 sig                 | 200, result.length=1      | Single ERC-721 WithdrawnBatch (1 token)        |
-| `exit-payload` (invalid tokenIndex) | `0x1a7b6aba...b4` + ERC-20 sig + tokenIndex=1                                                     | 404                       | Only 1 matching event; index 1 is out of range |
+| Endpoint                            | Input                                                                                             | Expected                                   | Notes                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------- |
+| `block-included` (mainnet)          | block `1234`                                                                                      | 200, headerBlockNumber=`0xea60`            | Very old Polygon mainnet block, always checkpointed           |
+| `block-included` (amoy)             | block `1234`                                                                                      | 200, headerBlockNumber=`0x9c40`            | Same block on Amoy testnet, always checkpointed               |
+| `fast-merkle-proof`                 | start=12345 end=12347 number=12346                                                                | 200, proof=`0xc622...`                     | Three consecutive blocks within one checkpoint                |
+| `exit-payload`                      | `0x1a7b6aba7e51344474d4fe722a3969e8c7a863c72329210a0dda80d26c4234b4` + ERC-20 sig                 | 200, result=`0xf90a24...`                  | ERC-20 burn tx, checkpointed mainnet                          |
+| `exit-payload`                      | same tx + tokenIndex=0                                                                            | 200, same result                           | Explicit index 0 is same as default                           |
+| `exit-payload (ERC-1155)`           | `0x4d4a9ee49a681a97ade92788f2fdce1d1761978ab491c2a10eb6849101cd63fe` + ERC-1155 TransferBatch sig | 200, result=`0xf90b6b...` (5854 chars)     | ERC-1155 TransferBatch; value pinned from local RPC           |
+| `all-exit-payloads`                 | `0xdc3e4c2d41edd8c0a059be22aaa48ee6649f3688456db234b7e382e1cf735b50` + ERC-20 sig                 | 200, result.length=1                       | Single ERC-721 WithdrawnBatch (1 token)                       |
+| `exit-payload` (invalid tokenIndex) | `0x1a7b6aba...b4` + ERC-20 sig + tokenIndex=1                                                     | 404                                        | Only 1 matching event; index 1 is out of range                |
+| `zkEVM bridge`                      | net_id=1 deposit_cnt=1                                                                            | 200, deposit.tx_hash=`0xb07cd0b3...`       | First-ever zkEVM mainnet deposit; always valid                |
+| `zkEVM merkle-proof`                | net_id=1 deposit_cnt=1                                                                            | 200, proof.merkle_proof is non-empty array | Proof path changes as tree grows; do not pin root hash values |
 
 ---
 
