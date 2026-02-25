@@ -1,16 +1,25 @@
 import { expect } from 'chai';
+import { describe, it } from 'mocha';
 import request from 'supertest';
 
 import { getExpressApp } from '../index.ts';
+import { decodeExitPayload } from './helpers/decode-exit-payload.ts';
 
 const app = getExpressApp();
 
-// Immutable data from the burn transaction receipt (Polygon chain, never changes):
-//   ERC-1155 child contract:   0xf313982cc68cc8f432b2133e94bf536d8b7fcdc3
-//   TransferBatch event topic: 0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb
-//   Operator / from address:   0x28c9c1f5aece95f8676e1c11db2ab08aeef2308f
+// Burn transaction: Polygon block 18113528, tx index 27
+//   ERC-1155 child contract: 0xf313982cc68cc8f432b2133e94bf536d8b7fcdc3
+//   Operator/from: 0x28c9c1f5aece95f8676e1c11db2ab08aeef2308f
 //
-// The Ethereum receipts-trie Merkle path is NOT pinned — see exit-payload-erc20.test.ts.
+// Immutable Polygon block data used as stable anchors (never changes regardless of RPC provider):
+//   receiptsRoot: 0xeb24486054aa8c0cc925c91bf3f32e983125c8e67f7e615d25aba530fd8c6deb
+//   (verifiable on Polygonscan: block 18113528 → "Receipts Root" field)
+const RECEIPTS_ROOT = '0xeb24486054aa8c0cc925c91bf3f32e983125c8e67f7e615d25aba530fd8c6deb';
+
+const ERC1155_CONTRACT = '0xf313982cc68cc8f432b2133e94bf536d8b7fcdc3';
+const TRANSFER_BATCH_SIG = '0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb';
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000000000000000000000000000';
+const OPERATOR = '28c9c1f5aece95f8676e1c11db2ab08aeef2308f';
 
 describe('matic exit payload — ERC-1155', function () {
   this.timeout(60000);
@@ -23,10 +32,22 @@ describe('matic exit payload — ERC-1155', function () {
     expect(res).property('status', 200);
     const result: string = res.body.result;
     expect(result).to.match(/^0x[0-9a-f]+$/i);
-    expect(result.length).to.be.greaterThan(2000);
-    // Burn tx receipt — immutable Polygon data:
-    expect(result).to.include('f313982cc68cc8f432b2133e94bf536d8b7fcdc3'); // ERC-1155 contract
-    expect(result).to.include('4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb'); // TransferBatch sig
-    expect(result).to.include('28c9c1f5aece95f8676e1c11db2ab08aeef2308f'); // operator/from
+
+    const { receiptsRoot, receiptLogs } = decodeExitPayload(result);
+
+    // receiptsRoot is the Polygon block's immutable receipts trie root.
+    expect(receiptsRoot).to.equal(RECEIPTS_ROOT);
+
+    // Find the TransferBatch-to-zero log that triggered this burn.
+    // TransferBatch(operator, from, to indexed, ids, values) — to is topics[3].
+    const burnLog = receiptLogs.find(
+      (l) => l.topics[0] === TRANSFER_BATCH_SIG && l.topics[3]?.toLowerCase() === ZERO_ADDR
+    );
+    if (!burnLog) throw new Error('TransferBatch-to-zero log not found in decoded receipt');
+    expect(burnLog.address).to.equal(ERC1155_CONTRACT);
+    expect(burnLog.topics[0]).to.equal(TRANSFER_BATCH_SIG);
+    // operator and from are both the same address for this burn
+    expect(burnLog.topics[1]!.toLowerCase()).to.include(OPERATOR);
+    expect(burnLog.topics[3]).to.equal(ZERO_ADDR);
   });
 });

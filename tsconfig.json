@@ -11,7 +11,7 @@
     "target": "esnext",
     // For nodejs:
     "lib": ["esnext"],
-    "types": ["node", "mocha"],
+    "types": ["node"],
 
     // Other Outputs
     "sourceMap": true,

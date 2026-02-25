@@ -11,7 +11,8 @@
     "test": "mocha",
     "start": "node src/bin/apiServer.ts",
     "dev": "dotenvx run -- nodemon -x \"node\" src/bin/apiServer.ts",
-    "prepare": "husky"
+    "prepare": "husky",
+    "get-receipts-root": "dotenvx run -- node src/scripts/get-receipts-root.ts"
   },
   "engines": {
     "node": ">=24.12.0"
@@ -26,6 +27,7 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.0.0",
     "@types/supertest": "^6.0.3",
+    "@types/yargs": "^17.0.35",
     "chai": "^6.2.2",
     "chai-as-promised": "^8.0.2",
     "eslint": "^9.39.2",
@@ -41,7 +43,8 @@
     "prettier": "^3.8.0",
     "supertest": "^7.2.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.53.0"
+    "typescript-eslint": "^8.53.0",
+    "yargs": "^18.0.0"
   },
   "dependencies": {
     "@maticnetwork/maticjs": "3.9.6",

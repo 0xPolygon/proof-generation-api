@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import { describe, it } from 'mocha';
 import request from 'supertest';
 
 import { getExpressApp } from '../index.ts';

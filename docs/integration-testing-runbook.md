@@ -171,6 +171,27 @@ it('should return merkle proof for block {N} in range [{start}, {end}]', async (
 
 ---
 
+## Exit payload field reference
+
+Every call to `exit-payload` or `all-exit-payloads` returns a hex string that is an **outer RLP list** of 10 fields, produced by `ExitUtil.encodePayload_` in `@maticnetwork/maticjs`. Understanding which fields are immutable Polygon chain data (and therefore safe to pin) versus variable is the key to writing stable tests.
+
+| #   | Field              | Source                                                          | Mutable?                        | Notes                                                                               |
+| --- | ------------------ | --------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------- |
+| 0   | `headerNumber`     | Ethereum — checkpoint index that covers the burn block          | Immutable for old txs           | One checkpoint contains this block forever                                          |
+| 1   | `blockProof`       | Polygon — Merkle proof of the block within the checkpoint range | Immutable for old txs           | Computed from `eth_getRootHash` on Polygon; stable once the checkpoint is finalised |
+| 2   | `blockNumber`      | Polygon block containing the burn tx                            | **Immutable**                   | Fixed by the transaction                                                            |
+| 3   | `timestamp`        | Polygon block timestamp                                         | **Immutable**                   | Fixed by the block                                                                  |
+| 4   | `transactionsRoot` | Polygon block header field                                      | **Immutable**                   | Fixed by the block                                                                  |
+| 5   | `receiptsRoot`     | Polygon block header field                                      | **Immutable** ← **pin this**    | 32-byte hash; identical across all RPC providers; verifiable on Polygonscan         |
+| 6   | `receipt`          | RLP-encoded burn tx receipt (status, gasUsed, logsBloom, logs)  | **Immutable** ← **decode this** | Contains all event logs; fixed by the Polygon chain                                 |
+| 7   | `parentNodes`      | Patricia trie proof nodes for the receipt within the block      | Stable in practice              | Deterministic given the same block receipts, but not pinned                         |
+| 8   | `path`             | `RLP(transactionIndex)` prefixed with `0x00`                    | **Immutable**                   | Fixed by tx position in block                                                       |
+| 9   | `logIndex`         | Index of the matched event within the receipt's log array       | **Immutable**                   | Fixed by the receipt                                                                |
+
+**Test strategy:** pin `receiptsRoot` (field 5) and decode the receipt (field 6) to assert structural log fields. Both are pure Polygon chain data — immutable, RPC-provider-independent, and verifiable on Polygonscan without running the service at all. The `decodeExitPayload` helper in `src/test/helpers/decode-exit-payload.ts` performs this decode.
+
+---
+
 ## Endpoint 3: `exit-payload` (single event)
 
 **URL pattern:** `GET /api/v1/matic/exit-payload/{burnTxHash}?eventSignature={sig}&tokenIndex={n}`
@@ -268,17 +289,37 @@ If `tokenIndex` equals or exceeds the number of matching events, the service ret
 
 ### Pinning the test case
 
+Rather than pinning the raw hex string (which can differ between RPC providers depending on checkpoint boundary state), tests decode the payload and assert two stable, RPC-independent properties:
+
+1. **`receiptsRoot`** — the receipts trie root from the Polygon block header. Immutable, identical across every RPC provider forever. Look it up once using `npm run get-receipts-root` (see [Adding New Test Cases](#adding-new-test-cases-to-the-test-files)) or directly on Polygonscan.
+
+2. **Burn log fields** — the contract address, event signature, and key indexed addresses decoded from the receipt bytes embedded in the payload. Pure Polygon chain data; equally immutable.
+
 ```typescript
+import { decodeExitPayload } from './helpers/decode-exit-payload.ts';
+
 it('ERC-20 exit payload test', async function () {
   const res = await request(app).get(
     '/api/v1/matic/exit-payload/{txHash}?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
   );
   expect(res).property('status', 200);
-  expect(res).property('body').property('result', '{0x...pinned_payload}');
+
+  const { receiptsRoot, receiptLogs } = decodeExitPayload(res.body.result);
+
+  // receiptsRoot: look up on Polygonscan for the block containing the burn tx
+  expect(receiptsRoot).to.equal('{0x...receipts_root_from_polygonscan}');
+
+  // Find the Transfer-to-zero log (topics[2] = 0x000...000 = burn address)
+  const burnLog = receiptLogs.find(
+    (l) =>
+      l.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' &&
+      l.topics[2] === '0x0000000000000000000000000000000000000000000000000000000000000000'
+  );
+  expect(burnLog).to.exist;
+  expect(burnLog!.address).to.equal('{token_contract_address}');
+  expect(burnLog!.data.toLowerCase()).to.include('{amount_hex}'); // ERC-20 only; ERC-721 data is empty
 });
 ```
-
-> **Important — determinism caveat:** ERC-20 and ERC-721 exit payloads are fully deterministic for a given burn tx. However, **ERC-1155 (and some other) payloads may differ slightly between RPC providers**. This is because `maticjs` generates the Merkle proof against the Ethereum RPC's current best block, and different providers can return different best blocks, producing proofs of different lengths. **Always pin the value returned by your locally configured RPC**, not the one returned by production. The value is stable for a given RPC endpoint over time.
 
 ### Datadog synthetic monitor
 
@@ -319,13 +360,31 @@ Same requirements as `exit-payload`, but ideally the target transaction should c
 
 ### Pinning the test case
 
+Same structural decode approach as `exit-payload`. All N payloads in the result array encode the same burn receipt from the same Polygon block, so `receiptsRoot` is identical across every entry.
+
 ```typescript
+import { decodeExitPayload } from './helpers/decode-exit-payload.ts';
+
 it('ERC-721 batch exit payloads test ({N} tokens)', async function () {
   const res = await request(app).get(
     '/api/v1/matic/all-exit-payloads/{txHash}?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
   );
   expect(res).property('status', 200);
-  expect(res).property('body').property('result').property('length', { N });
+  const result: string[] = res.body.result;
+  expect(result).to.be.an('array').with.length({ N });
+
+  for (const payload of result) {
+    const { receiptsRoot, receiptLogs } = decodeExitPayload(payload);
+    expect(receiptsRoot).to.equal('{0x...receipts_root_from_polygonscan}');
+
+    const burnLog = receiptLogs.find(
+      (l) =>
+        l.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' &&
+        l.topics[2] === '0x0000000000000000000000000000000000000000000000000000000000000000'
+    );
+    expect(burnLog).to.exist;
+    expect(burnLog!.address).to.equal('{token_contract_address}');
+  }
 });
 ```
 
@@ -396,42 +455,79 @@ Confirm HTTP 200 and a populated `proof` object with a non-empty `merkle_proof` 
 
 ---
 
-## Adding New Test Cases to `api_test.ts`
+## Adding New Test Cases to the test files
 
-Once you have found a valid URL via the production service:
+### Step 1 — Validate the URL against production
 
-1. **Validate the full response body** using `curl` with a pretty-printer:
+```sh
+curl "https://proof-generator.polygon.technology/api/v1/matic/exit-payload/{txHash}?eventSignature={sig}" \
+  | python3 -m json.tool
+```
 
-   ```sh
-   curl "https://proof-generator.polygon.technology/api/v1/matic/exit-payload/{txHash}?eventSignature={sig}" | python3 -m json.tool
-   ```
+A 200 response confirms the tx is valid and checkpointed. You do not need to capture the raw `result` value.
 
-2. **Extract the `result` field value to a file** — exit payload hex strings can exceed 5000 characters, which will be silently truncated by terminal output limits if you print them to stdout. **Always write to a file instead:**
+### Step 2 — Find the `receiptsRoot` for the burn transaction
 
-   ```sh
-   curl "..." | python3 -c "import json,sys; open('/tmp/result.txt','w').write(json.load(sys.stdin)['result'])"
-   cat /tmp/result.txt
-   ```
+Use the helper script `src/scripts/get-receipts-root.ts` via its npm alias:
 
-   Copying from a `print()` or `echo` output that was scrolled or piped will silently truncate the value, causing the pinned assertion to fail with a cryptic length mismatch.
+```sh
+npm run get-receipts-root -- --tx {txHash}
+```
 
-3. **Pin the LOCAL service's value, not production.** The integration tests run against the locally configured RPCs, which may produce slightly different proof bytes than production for some token types (ERC-1155 in particular). Get the correct value to pin by running the test once, reading the failure diff's "actual" value, and using that as the pinned assertion.
+Output:
 
-4. **Add the test** in `src/test/api_test.ts` following existing patterns.
+```
+txHash:       0x1a7b6aba...
+blockNumber:  11619491
+txIndex:      0
+receiptsRoot: 0xc37362a665ea9596ce130e50ba31f673672dfc7e946870c1cbb20884269e5d4f
+```
 
-5. **Run `npm test`** to confirm the test passes locally before committing.
+You can verify `receiptsRoot` independently on Polygonscan: open the block page (`polygonscan.com/block/{blockNumber}`) and look for the **Receipts Root** field.
 
-### Test case template
+### Step 3 — Identify the burn log fields
+
+Look up the transaction on Polygonscan → **Logs** tab. Find the log that matches your `eventSignature` and has `to = 0x0000...0000`. Note:
+
+- The contract `address` (the token child contract)
+- The `topics` array (indexed event arguments)
+- The `data` field (non-indexed arguments — for ERC-20 this contains the transfer amount; for ERC-721 the data is empty since all fields are indexed)
+
+### Step 4 — Write the test
 
 ```typescript
-it('{description} — {tokenType} — {brief description}', async function () {
-  this.timeout(30000); // RPC calls can take up to 15s
+import { decodeExitPayload } from './helpers/decode-exit-payload.ts';
+
+it('{description}', async function () {
+  this.timeout(60000);
 
   const res = await request(app).get('/api/v1/matic/exit-payload/{txHash}?eventSignature={sig}');
-
   expect(res).property('status', 200);
-  expect(res).property('body').property('result', '{pinned_result_value}');
+
+  const { receiptsRoot, receiptLogs } = decodeExitPayload(res.body.result);
+
+  expect(receiptsRoot).to.equal('{receiptsRoot from Step 2}');
+
+  const burnLog = receiptLogs.find(
+    (l) =>
+      l.topics[0] === '{eventSignature}' &&
+      l.topics[{ toIndex }] === '0x0000000000000000000000000000000000000000000000000000000000000000'
+  );
+  expect(burnLog).to.exist;
+  expect(burnLog!.address).to.equal('{token_contract_address}');
+  // For ERC-20: also assert burnLog!.data.toLowerCase().includes('{amount_hex}')
 });
+```
+
+> **`toIndex` by event type:**
+>
+> - ERC-20 / ERC-721 `Transfer(from, to, value/tokenId)` → `topics[2]`
+> - ERC-1155 `TransferSingle` / `TransferBatch(operator, from, to, ...)` → `topics[3]`
+
+### Step 5 — Run tests
+
+```sh
+npm test
 ```
 
 ---
@@ -446,8 +542,8 @@ it('{description} — {tokenType} — {brief description}', async function () {
 | `block-included` (mainnet) | `/api/v1/matic/block-included/1234`                                  | status=200, `headerBlockNumber`=`0xea60`      | 5 min          |
 | `block-included` (amoy)    | `/api/v1/amoy/block-included/1234`                                   | status=200, `headerBlockNumber`=`0x9c40`      | 5 min          |
 | `fast-merkle-proof`        | `/api/v1/matic/fast-merkle-proof?start=12345&end=12347&number=12346` | status=200, `proof` matches pinned value      | 5 min          |
-| `exit-payload (ERC-20)`    | `/api/v1/matic/exit-payload/{tx}?eventSignature=0xddf252...`         | status=200, `result` matches pinned value     | 10 min         |
-| `exit-payload (ERC-1155)`  | `/api/v1/matic/exit-payload/{tx}?eventSignature=0x4a39dc...`         | status=200, `result` is non-empty             | 10 min         |
+| `exit-payload (ERC-20)`    | `/api/v1/matic/exit-payload/{tx}?eventSignature=0xddf252...`         | status=200, `result` is non-empty hex string  | 10 min         |
+| `exit-payload (ERC-1155)`  | `/api/v1/matic/exit-payload/{tx}?eventSignature=0x4a39dc...`         | status=200, `result` is non-empty hex string  | 10 min         |
 | `all-exit-payloads`        | `/api/v1/matic/all-exit-payloads/{tx}?eventSignature=0xddf252...`    | status=200, `result.length` = N               | 10 min         |
 | `zkEVM bridge`             | `/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1`                   | status=200, `deposit.tx_hash` matches pinned  | 10 min         |
 | `zkEVM merkle-proof`       | `/api/zkevm/mainnet/merkle-proof?net_id=1&deposit_cnt=1`             | status=200, `proof.merkle_proof` is non-empty | 10 min         |
@@ -462,18 +558,18 @@ it('{description} — {tokenType} — {brief description}', async function () {
 
 ## Reference: Currently Known-Good Test Cases
 
-| Endpoint                            | Input                                                                                             | Expected                                   | Notes                                                         |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------- |
-| `block-included` (mainnet)          | block `1234`                                                                                      | 200, headerBlockNumber=`0xea60`            | Very old Polygon mainnet block, always checkpointed           |
-| `block-included` (amoy)             | block `1234`                                                                                      | 200, headerBlockNumber=`0x9c40`            | Same block on Amoy testnet, always checkpointed               |
-| `fast-merkle-proof`                 | start=12345 end=12347 number=12346                                                                | 200, proof=`0xc622...`                     | Three consecutive blocks within one checkpoint                |
-| `exit-payload`                      | `0x1a7b6aba7e51344474d4fe722a3969e8c7a863c72329210a0dda80d26c4234b4` + ERC-20 sig                 | 200, result=`0xf90a24...`                  | ERC-20 burn tx, checkpointed mainnet                          |
-| `exit-payload`                      | same tx + tokenIndex=0                                                                            | 200, same result                           | Explicit index 0 is same as default                           |
-| `exit-payload (ERC-1155)`           | `0x4d4a9ee49a681a97ade92788f2fdce1d1761978ab491c2a10eb6849101cd63fe` + ERC-1155 TransferBatch sig | 200, result=`0xf90b6b...` (5854 chars)     | ERC-1155 TransferBatch; value pinned from local RPC           |
-| `all-exit-payloads`                 | `0xdc3e4c2d41edd8c0a059be22aaa48ee6649f3688456db234b7e382e1cf735b50` + ERC-20 sig                 | 200, result.length=1                       | Single ERC-721 WithdrawnBatch (1 token)                       |
-| `exit-payload` (invalid tokenIndex) | `0x1a7b6aba...b4` + ERC-20 sig + tokenIndex=1                                                     | 404                                        | Only 1 matching event; index 1 is out of range                |
-| `zkEVM bridge`                      | net_id=1 deposit_cnt=1                                                                            | 200, deposit.tx_hash=`0xb07cd0b3...`       | First-ever zkEVM mainnet deposit; always valid                |
-| `zkEVM merkle-proof`                | net_id=1 deposit_cnt=1                                                                            | 200, proof.merkle_proof is non-empty array | Proof path changes as tree grows; do not pin root hash values |
+| Endpoint                            | Input                                                 | Expected                                                                                                         | Notes                                                               |
+| ----------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `block-included` (mainnet)          | block `1234`                                          | 200, headerBlockNumber=`0xea60`                                                                                  | Very old Polygon mainnet block, always checkpointed                 |
+| `block-included` (amoy)             | block `1234`                                          | 200, headerBlockNumber=`0x9c40`                                                                                  | Same block on Amoy testnet, always checkpointed                     |
+| `fast-merkle-proof`                 | start=12345 end=12347 number=12346                    | 200, proof=`0xc622...` (exact)                                                                                   | Three consecutive blocks within one checkpoint; fully deterministic |
+| `exit-payload` (ERC-20)             | `0x1a7b6aba...b4` + ERC-20 sig (block 11619491)       | 200, receiptsRoot=`0xc37362...`, WETH contract, Transfer-to-zero, 10 WETH                                        | receiptsRoot verifiable on Polygonscan block 11619491               |
+| `exit-payload` (ERC-20, tokenIndex) | same tx + tokenIndex=0                                | same assertions                                                                                                  | Explicit index 0 is same as default                                 |
+| `exit-payload` (ERC-1155)           | `0x4d4a9ee...fe` + TransferBatch sig (block 18113528) | 200, receiptsRoot=`0xeb2448...`, ERC-1155 contract, TransferBatch-to-zero, operator `0x28c9c1...`                | receiptsRoot verifiable on Polygonscan block 18113528               |
+| `all-exit-payloads` (ERC-721)       | `0xdc3e4c...50` + ERC-20 sig (block 81892489)         | 200, result.length=1, each payload: receiptsRoot=`0xf9210b...`, ERC-721 contract `0x9ab26d...`, Transfer-to-zero | receiptsRoot verifiable on Polygonscan block 81892489               |
+| `exit-payload` (invalid tokenIndex) | `0x1a7b6aba...b4` + ERC-20 sig + tokenIndex=1         | 404                                                                                                              | Only 1 matching event; index 1 is out of range                      |
+| `zkEVM bridge`                      | net_id=1 deposit_cnt=1                                | 200, deposit.tx_hash=`0xb07cd0b3...`                                                                             | First-ever zkEVM mainnet deposit; always valid                      |
+| `zkEVM merkle-proof`                | net_id=1 deposit_cnt=1                                | 200, proof.merkle_proof is non-empty array                                                                       | Proof path changes as tree grows; do not pin root hash values       |
 
 ---
 
