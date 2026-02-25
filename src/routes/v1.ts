@@ -6,15 +6,25 @@ import { InfoError } from '../helpers/errorHelper.ts';
 import { handleBadRequest, handleError, handleResponse } from '../helpers/responseHandlers.ts';
 import { getLogger } from '../logger.ts';
 import {
+  AllExitPayloadsSchema,
+  BlockIncludedSchema,
+  ExitPayloadSchema,
+  FastMerkleProofSchema
+} from '../schemas.ts';
+import {
   isBlockIncluded,
   fastMerkleProof,
   generateExitPayload,
   generateAllExitPayloads
 } from '../services/v1ProofGenerationServices.ts';
-import { isInteger } from './utils.ts';
 
 const logger = getLogger();
 const router = Router();
+
+const networkDetails = {
+  matic: { version: 'v1' as const, isMainnet: true },
+  amoy: { version: 'amoy' as const, isMainnet: false }
+} as const;
 
 /**
  * Verify merkle proof
@@ -41,78 +51,19 @@ function verifyMerkleProof(number: string, start: string, proof: string) {
   return index < 2 ** proofHeight;
 }
 
-function validateV1Network(res: Response, network: string | undefined) {
-  if (network !== 'matic' && network !== 'amoy') {
-    return handleBadRequest({
-      res,
-      errMsg: `Invalid network ${network}. Network can either be matic or amoy for PoS v1 routes`
-    });
-  }
-  return null;
-}
-
-function validateBurnTxAndEventSignature(
-  res: Response,
-  burnTxHash: string | string[] | undefined,
-  eventSignature: string | string[] | undefined
-) {
-  if (
-    typeof burnTxHash !== 'string' ||
-    typeof eventSignature !== 'string' ||
-    !burnTxHash ||
-    !eventSignature
-  ) {
-    return handleBadRequest({
-      res,
-      errMsg: 'Invalid burnTxHash or eventSignature!'
-    });
-  }
-
-  const burnTxHashStr = burnTxHash;
-  const eventSignatureStr = eventSignature;
-
-  if (
-    !burnTxHashStr.startsWith('0x') ||
-    !eventSignatureStr.startsWith('0x') ||
-    burnTxHashStr.length !== 66 ||
-    eventSignatureStr.length !== 66
-  ) {
-    return handleBadRequest({
-      res,
-      errMsg: 'Incorrect Burn tx or Event Signature!'
-    });
-  }
-  return null;
-}
-
-function getV1NetworkDetails(network: string | undefined) {
-  const version = network === 'matic' ? 'v1' : network!;
-  const isMainnet = network === 'matic';
-  return { version, isMainnet };
-}
-
 router.get('/:network/block-included/:blockNumber', async (req: Request, res: Response) => {
   try {
-    const blockNumber = req.params['blockNumber'] as string;
-    const network = req.params['network'] as string;
-
-    if (!blockNumber || !isInteger(blockNumber)) {
-      logger.debug({ message: 'Invalid block number!', blockNumber });
-
+    const result = BlockIncludedSchema.safeParse({ params: req.params, query: req.query });
+    if (!result.success) {
+      logger.debug({ message: result.error.issues[0]?.message, params: req.params });
       return handleBadRequest({
         res,
-        errMsg: 'Invalid block number!'
+        errMsg: result.error.issues[0]?.message ?? 'Invalid request'
       });
     }
 
-    const validationError = validateV1Network(res, network);
-    if (validationError) {
-      logger.debug({ message: `Invalid network ${network}!`, blockNumber });
-
-      return validationError;
-    }
-
-    const { version, isMainnet } = getV1NetworkDetails(network);
+    const { network, blockNumber } = result.data.params;
+    const { version, isMainnet } = networkDetails[network];
 
     const responseObj = await isBlockIncluded(blockNumber, isMainnet, version);
     return handleResponse({ res, data: responseObj });
@@ -127,28 +78,16 @@ router.get('/:network/block-included/:blockNumber', async (req: Request, res: Re
 
 router.get('/:network/fast-merkle-proof', async (req: Request, res: Response) => {
   try {
-    const startParam = req.query['start'] as string;
-    const endParam = req.query['end'] as string;
-    const numberParam = req.query['number'] as string;
-    const network = req.params['network'] as string;
-
-    if (
-      !startParam ||
-      !isInteger(startParam) ||
-      !endParam ||
-      !isInteger(endParam) ||
-      !numberParam ||
-      !isInteger(numberParam)
-    ) {
+    const result = FastMerkleProofSchema.safeParse({ params: req.params, query: req.query });
+    if (!result.success) {
       return handleBadRequest({
         res,
-        errMsg: 'Invalid start, end or block number!'
+        errMsg: result.error.issues[0]?.message ?? 'Invalid request'
       });
     }
 
-    const start = parseInt(startParam, 10);
-    const end = parseInt(endParam, 10);
-    const number = parseInt(numberParam, 10);
+    const { network } = result.data.params;
+    const { start, end, number } = result.data.query;
 
     if (end < start || number > end || number < start) {
       return handleBadRequest({
@@ -157,19 +96,20 @@ router.get('/:network/fast-merkle-proof', async (req: Request, res: Response) =>
       });
     }
 
-    const validationError = validateV1Network(res, network);
-    if (validationError) {
-      return validationError;
-    }
+    const { version, isMainnet } = networkDetails[network];
 
-    const { version, isMainnet } = getV1NetworkDetails(network);
-
-    const responseObj = await fastMerkleProof(startParam, endParam, number, isMainnet, version);
+    const responseObj = await fastMerkleProof(
+      String(start),
+      String(end),
+      number,
+      isMainnet,
+      version
+    );
 
     if (
       !responseObj ||
       !responseObj.proof ||
-      !verifyMerkleProof(numberParam, startParam, responseObj.proof)
+      !verifyMerkleProof(String(number), String(start), responseObj.proof)
     ) {
       handleError({ res, errMsg: 'Invalid merkle proof created' });
       return;
@@ -187,20 +127,18 @@ router.get('/:network/fast-merkle-proof', async (req: Request, res: Response) =>
 
 router.get('/:network/exit-payload/:burnTxHash', async (req: Request, res: Response) => {
   try {
-    const burnTxHash = req.params['burnTxHash'] as string;
-    const eventSignature = req.query['eventSignature'] as string;
-    const network = req.params['network'] as string;
-
-    const validationError =
-      validateBurnTxAndEventSignature(res, burnTxHash, eventSignature) ||
-      validateV1Network(res, network);
-
-    if (validationError) {
-      return validationError;
+    const result = ExitPayloadSchema.safeParse({ params: req.params, query: req.query });
+    if (!result.success) {
+      return handleBadRequest({
+        res,
+        errMsg: result.error.issues[0]?.message ?? 'Invalid request'
+      });
     }
 
-    const { version, isMainnet } = getV1NetworkDetails(network);
-    const tokenIndex = parseInt((req.query['tokenIndex'] as string) || '0', 10);
+    const { network, burnTxHash } = result.data.params;
+    const { eventSignature, tokenIndex } = result.data.query;
+    const { version, isMainnet } = networkDetails[network];
+
     const responseObj = await generateExitPayload(
       burnTxHash,
       eventSignature,
@@ -221,19 +159,17 @@ router.get('/:network/exit-payload/:burnTxHash', async (req: Request, res: Respo
 
 router.get('/:network/all-exit-payloads/:burnTxHash', async (req: Request, res: Response) => {
   try {
-    const burnTxHash = req.params['burnTxHash'] as string;
-    const eventSignature = req.query['eventSignature'] as string;
-    const network = req.params['network'] as string;
-
-    const validationError =
-      validateBurnTxAndEventSignature(res, burnTxHash, eventSignature) ||
-      validateV1Network(res, network);
-
-    if (validationError) {
-      return validationError;
+    const result = AllExitPayloadsSchema.safeParse({ params: req.params, query: req.query });
+    if (!result.success) {
+      return handleBadRequest({
+        res,
+        errMsg: result.error.issues[0]?.message ?? 'Invalid request'
+      });
     }
 
-    const { version, isMainnet } = getV1NetworkDetails(network);
+    const { network, burnTxHash } = result.data.params;
+    const { eventSignature } = result.data.query;
+    const { version, isMainnet } = networkDetails[network];
 
     const responseObj = await generateAllExitPayloads(
       burnTxHash,

@@ -1,10 +1,12 @@
 import { Router } from 'express';
 
+import { openApiRouter } from './openapi.ts';
 import { v1Routes } from './v1.ts';
 import { zkEVMRoutes } from './zkEVM.ts';
 
 const router = Router();
 
+router.use('/', openApiRouter);
 router.use('/v1', v1Routes);
 router.use('/zkevm', zkEVMRoutes);
 

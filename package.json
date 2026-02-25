@@ -47,8 +47,10 @@
     "yargs": "^18.0.0"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^8.4.1",
     "@maticnetwork/maticjs": "3.9.6",
     "@maticnetwork/maticjs-ethers": "^1.1.0",
+    "@scalar/express-api-reference": "^0.8.45",
     "@sentry/node": "^10.39.0",
     "@t3-oss/env-core": "^0.13.10",
     "@types/winston": "^2.4.4",

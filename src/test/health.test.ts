@@ -1,16 +1,14 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import request from 'supertest';
 
-import { getExpressApp } from '../index.ts';
-
-const app = getExpressApp();
+import { getAgent } from './helpers/agent.ts';
 
 describe('server health', function () {
   it('server healthcheck responds', async function () {
-    this.timeout(100);
+    // 100ms is tight enough to catch regressions locally; allow more for remote round-trips
+    this.timeout(process.env['TEST_BASE_URL'] ? 5000 : 100);
 
-    const res = await request(app).get('/health-check');
+    const res = await getAgent().get('/health-check');
 
     expect(res).property('status', 200);
   });

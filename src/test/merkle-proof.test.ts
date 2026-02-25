@@ -1,16 +1,13 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import request from 'supertest';
 
-import { getExpressApp } from '../index.ts';
-
-const app = getExpressApp();
+import { getAgent } from './helpers/agent.ts';
 
 describe('merkle proof generation', function () {
   this.timeout(30000);
 
   it('should return the expected proof result for a known block', async function () {
-    const res = await request(app).get(
+    const res = await getAgent().get(
       '/api/v1/matic/fast-merkle-proof?start=12345&end=12347&number=12346'
     );
 
@@ -23,28 +20,53 @@ describe('merkle proof generation', function () {
       );
   });
 
-  it('should return error 400 if given a malformed start block number', async function () {
-    const res = await request(app).get(
+  it('should 400 with correct message for a float start block number', async function () {
+    const res = await getAgent().get(
       '/api/v1/matic/fast-merkle-proof?start=12324.56&end=12347&number=12346'
     );
+
     expect(res).property('status', 400);
+    expect(res).property('body').property('error', true);
+    expect(res).property('body').property('msg', 'Invalid start, end or block number!');
   });
 
-  it('invalid merkle proof generation arguments test - 2', async function () {
-    const res = await request(app).get(
+  it('should 400 with correct message for a non-numeric start block number', async function () {
+    const res = await getAgent().get(
+      '/api/v1/matic/fast-merkle-proof?start=abc&end=12347&number=12346'
+    );
+
+    expect(res).property('status', 400);
+    expect(res).property('body').property('error', true);
+    expect(res).property('body').property('msg', 'Invalid start, end or block number!');
+  });
+
+  it('should 400 with correct message when number > end', async function () {
+    const res = await getAgent().get(
       '/api/v1/matic/fast-merkle-proof?start=12345&end=12347&number=12348'
     );
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
+    expect(res).property('body').property('msg', 'Invalid start or end or block numbers!');
   });
 
-  it('invalid merkle proof generation arguments test - 3', async function () {
-    const res = await request(app).get(
+  it('should 400 with correct message when end < start', async function () {
+    const res = await getAgent().get(
       '/api/v1/matic/fast-merkle-proof?start=12348&end=12347&number=12347'
     );
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
+    expect(res).property('body').property('msg', 'Invalid start or end or block numbers!');
+  });
+
+  it('should 400 with correct message when number < start', async function () {
+    const res = await getAgent().get(
+      '/api/v1/matic/fast-merkle-proof?start=12346&end=12347&number=12344'
+    );
+
+    expect(res).property('status', 400);
+    expect(res).property('body').property('error', true);
+    expect(res).property('body').property('msg', 'Invalid start or end or block numbers!');
   });
 });

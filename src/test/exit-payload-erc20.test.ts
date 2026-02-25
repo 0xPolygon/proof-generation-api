@@ -1,11 +1,8 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import request from 'supertest';
 
-import { getExpressApp } from '../index.ts';
+import { getAgent } from './helpers/agent.ts';
 import { decodeExitPayload } from './helpers/decode-exit-payload.ts';
-
-const app = getExpressApp();
 
 // Burn transaction: Polygon block 11619491, tx index 0
 //   WETH child contract: 0xb6509cbd9e2d1cec787a7357eb1578b86a0c702d
@@ -46,7 +43,7 @@ describe('matic exit payload — ERC-20', function () {
   }
 
   it('exit payload test', async function () {
-    const res = await request(app).get(
+    const res = await getAgent().get(
       '/api/v1/matic/exit-payload/0x1a7b6aba7e51344474d4fe722a3969e8c7a863c72329210a0dda80d26c4234b4?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
     );
 
@@ -55,7 +52,7 @@ describe('matic exit payload — ERC-20', function () {
   });
 
   it('exit payload with tokenIndex argument test', async function () {
-    const res = await request(app).get(
+    const res = await getAgent().get(
       '/api/v1/matic/exit-payload/0x1a7b6aba7e51344474d4fe722a3969e8c7a863c72329210a0dda80d26c4234b4?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef&tokenIndex=0'
     );
 

@@ -1,11 +1,8 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import request from 'supertest';
 
-import { getExpressApp } from '../index.ts';
+import { getAgent } from './helpers/agent.ts';
 import { decodeExitPayload } from './helpers/decode-exit-payload.ts';
-
-const app = getExpressApp();
 
 // Burn transaction: Polygon block 81892489, tx index 278
 //   ERC-721 child contract: 0x9ab26d93aef3e78c3e220ecb20e769cbd07077c9
@@ -24,7 +21,7 @@ describe('matic exit payload — all-exit-payloads', function () {
   this.timeout(60000);
 
   it('erc721 all exit payloads test', async function () {
-    const res = await request(app).get(
+    const res = await getAgent().get(
       '/api/v1/matic/all-exit-payloads/0xdc3e4c2d41edd8c0a059be22aaa48ee6649f3688456db234b7e382e1cf735b50?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
     );
 
