@@ -1,5 +1,0 @@
-{
-  "extension": ["ts"],
-  "spec": "src/test/**/*.ts",
-  "require": ["@dotenvx/dotenvx/config"]
-}

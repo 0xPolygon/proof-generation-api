@@ -1,5 +1,4 @@
-import { expect } from 'chai';
-import { describe, it } from 'mocha';
+import { describe, expect, it } from 'vitest';
 
 import { getAgent } from './helpers/agent.ts';
 import { decodeExitPayload } from './helpers/decode-exit-payload.ts';
@@ -18,31 +17,29 @@ const TRANSFER_SIG = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4d
 const ZERO_ADDR = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const AMOUNT_10_WETH = '8ac7230489e80000';
 
-describe('matic exit payload — ERC-20', function () {
-  this.timeout(60000);
+function assertErc20Payload(result: string) {
+  expect(result).match(/^0x[0-9a-f]+$/i);
 
-  function assertErc20Payload(result: string) {
-    expect(result).to.match(/^0x[0-9a-f]+$/i);
+  const { receiptsRoot, receiptLogs } = decodeExitPayload(result);
 
-    const { receiptsRoot, receiptLogs } = decodeExitPayload(result);
+  // receiptsRoot is the Polygon block's immutable receipts trie root — stable
+  // across all RPC providers and forever pinnable from block explorer data.
+  expect(receiptsRoot).equal(RECEIPTS_ROOT);
 
-    // receiptsRoot is the Polygon block's immutable receipts trie root — stable
-    // across all RPC providers and forever pinnable from block explorer data.
-    expect(receiptsRoot).to.equal(RECEIPTS_ROOT);
+  // Find the Transfer-to-zero log that triggered this burn.
+  const burnLog = receiptLogs.find(
+    (l) => l.topics[0] === TRANSFER_SIG && l.topics[2]?.toLowerCase() === ZERO_ADDR
+  );
+  if (!burnLog) throw new Error('Transfer-to-zero log not found in decoded receipt');
+  expect(burnLog.address).equal(WETH_CONTRACT);
+  expect(burnLog.topics[0]).equal(TRANSFER_SIG);
+  expect(burnLog.topics[2]).equal(ZERO_ADDR);
+  // Transfer(from, to, value) — value is ABI-encoded in data as a uint256
+  expect(burnLog.data.toLowerCase()).include(AMOUNT_10_WETH);
+}
 
-    // Find the Transfer-to-zero log that triggered this burn.
-    const burnLog = receiptLogs.find(
-      (l) => l.topics[0] === TRANSFER_SIG && l.topics[2]?.toLowerCase() === ZERO_ADDR
-    );
-    if (!burnLog) throw new Error('Transfer-to-zero log not found in decoded receipt');
-    expect(burnLog.address).to.equal(WETH_CONTRACT);
-    expect(burnLog.topics[0]).to.equal(TRANSFER_SIG);
-    expect(burnLog.topics[2]).to.equal(ZERO_ADDR);
-    // Transfer(from, to, value) — value is ABI-encoded in data as a uint256
-    expect(burnLog.data.toLowerCase()).to.include(AMOUNT_10_WETH);
-  }
-
-  it('exit payload test', async function () {
+describe('matic exit payload — ERC-20', { timeout: 60_000 }, () => {
+  it('exit payload test', async () => {
     const res = await getAgent().get(
       '/api/v1/matic/exit-payload/0x1a7b6aba7e51344474d4fe722a3969e8c7a863c72329210a0dda80d26c4234b4?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
     );
@@ -51,7 +48,7 @@ describe('matic exit payload — ERC-20', function () {
     assertErc20Payload(res.body.result);
   });
 
-  it('exit payload with tokenIndex argument test', async function () {
+  it('exit payload with tokenIndex argument test', async () => {
     const res = await getAgent().get(
       '/api/v1/matic/exit-payload/0x1a7b6aba7e51344474d4fe722a3969e8c7a863c72329210a0dda80d26c4234b4?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef&tokenIndex=0'
     );

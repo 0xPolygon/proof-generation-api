@@ -43,5 +43,5 @@
     "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true // Ensure all TS syntax does not have runtime impact
   },
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist", "vitest.config.ts"]
 }

@@ -1,37 +1,31 @@
-import { expect } from 'chai';
-import { describe, it } from 'mocha';
+import { describe, expect, it } from 'vitest';
 
 import { getAgent } from './helpers/agent.ts';
 
-describe('zkEVM endpoints', function () {
-  this.timeout(30000);
-
-  it('zkEVM mainnet bridge — deposit lookup', async function () {
+describe('zkEVM endpoints', { timeout: 30_000 }, () => {
+  it('zkEVM mainnet bridge — deposit lookup', async () => {
     const res = await getAgent().get('/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1');
 
     expect(res).property('status', 200);
-    expect(res.body).to.have.property('deposit');
-    expect(res.body.deposit).to.have.property(
+    expect(res.body).property('deposit');
+    expect(res.body.deposit).property(
       'tx_hash',
       '0xb07cd0b30019c78c0b60e464c7c38a0a8076a355dbe9177205573e86455f31b6'
     );
-    expect(res.body.deposit).to.have.property('deposit_cnt', 1);
-    expect(res.body.deposit).to.have.property('ready_for_claim', true);
+    expect(res.body.deposit).property('deposit_cnt', 1);
+    expect(res.body.deposit).property('ready_for_claim', true);
   });
 
-  it('zkEVM mainnet merkle-proof — deposit lookup', async function () {
+  it('zkEVM mainnet merkle-proof — deposit lookup', async () => {
     const res = await getAgent().get('/api/zkevm/mainnet/merkle-proof?net_id=1&deposit_cnt=1');
 
     expect(res).property('status', 200);
-    expect(res.body).to.have.property('proof');
-    expect(res.body.proof)
-      .to.have.property('merkle_proof')
-      .that.is.an('array')
-      .with.length.greaterThan(0);
-    expect(res.body.proof).to.have.property('rollup_merkle_proof').that.is.an('array');
+    expect(res.body).property('proof');
+    expect(res.body.proof).property('merkle_proof').an('array').length.greaterThan(0);
+    expect(res.body.proof).property('rollup_merkle_proof').an('array');
   });
 
-  it('should 400 with correct message for invalid network on zkEVM bridge', async function () {
+  it('should 400 with correct message for invalid network on zkEVM bridge', async () => {
     const res = await getAgent().get('/api/zkevm/polygon/bridge?net_id=1&deposit_cnt=1');
 
     expect(res).property('status', 400);
@@ -44,7 +38,7 @@ describe('zkEVM endpoints', function () {
       );
   });
 
-  it('should 400 with correct message for invalid network on zkEVM merkle-proof', async function () {
+  it('should 400 with correct message for invalid network on zkEVM merkle-proof', async () => {
     const res = await getAgent().get('/api/zkevm/polygon/merkle-proof?net_id=1&deposit_cnt=1');
 
     expect(res).property('status', 400);
@@ -57,7 +51,7 @@ describe('zkEVM endpoints', function () {
       );
   });
 
-  it('should 400 with correct message for non-integer deposit_cnt', async function () {
+  it('should 400 with correct message for non-integer deposit_cnt', async () => {
     const res = await getAgent().get('/api/zkevm/mainnet/merkle-proof?net_id=1&deposit_cnt=abc');
 
     expect(res).property('status', 400);
@@ -65,7 +59,7 @@ describe('zkEVM endpoints', function () {
     expect(res).property('body').property('msg', 'Invalid network ID or deposit count!');
   });
 
-  it('should 400 with correct message for float deposit_cnt', async function () {
+  it('should 400 with correct message for float deposit_cnt', async () => {
     const res = await getAgent().get('/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1.5');
 
     expect(res).property('status', 400);
@@ -73,7 +67,7 @@ describe('zkEVM endpoints', function () {
     expect(res).property('body').property('msg', 'Invalid network ID or deposit count!');
   });
 
-  it('should 400 with correct message for non-integer net_id', async function () {
+  it('should 400 with correct message for non-integer net_id', async () => {
     const res = await getAgent().get('/api/zkevm/mainnet/bridge?net_id=abc&deposit_cnt=1');
 
     expect(res).property('status', 400);

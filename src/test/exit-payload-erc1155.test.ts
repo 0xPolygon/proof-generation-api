@@ -1,5 +1,4 @@
-import { expect } from 'chai';
-import { describe, it } from 'mocha';
+import { describe, expect, it } from 'vitest';
 
 import { getAgent } from './helpers/agent.ts';
 import { decodeExitPayload } from './helpers/decode-exit-payload.ts';
@@ -18,22 +17,20 @@ const TRANSFER_BATCH_SIG = '0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d98
 const ZERO_ADDR = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const OPERATOR = '28c9c1f5aece95f8676e1c11db2ab08aeef2308f';
 
-describe('matic exit payload — ERC-1155', function () {
-  this.timeout(60000);
-
-  it('erc1155 exit payload test', async function () {
+describe('matic exit payload — ERC-1155', { timeout: 60_000 }, () => {
+  it('erc1155 exit payload test', async () => {
     const res = await getAgent().get(
       '/api/v1/matic/exit-payload/0x4d4a9ee49a681a97ade92788f2fdce1d1761978ab491c2a10eb6849101cd63fe?eventSignature=0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb'
     );
 
     expect(res).property('status', 200);
     const result: string = res.body.result;
-    expect(result).to.match(/^0x[0-9a-f]+$/i);
+    expect(result).match(/^0x[0-9a-f]+$/i);
 
     const { receiptsRoot, receiptLogs } = decodeExitPayload(result);
 
     // receiptsRoot is the Polygon block's immutable receipts trie root.
-    expect(receiptsRoot).to.equal(RECEIPTS_ROOT);
+    expect(receiptsRoot).equal(RECEIPTS_ROOT);
 
     // Find the TransferBatch-to-zero log that triggered this burn.
     // TransferBatch(operator, from, to indexed, ids, values) — to is topics[3].
@@ -41,10 +38,12 @@ describe('matic exit payload — ERC-1155', function () {
       (l) => l.topics[0] === TRANSFER_BATCH_SIG && l.topics[3]?.toLowerCase() === ZERO_ADDR
     );
     if (!burnLog) throw new Error('TransferBatch-to-zero log not found in decoded receipt');
-    expect(burnLog.address).to.equal(ERC1155_CONTRACT);
-    expect(burnLog.topics[0]).to.equal(TRANSFER_BATCH_SIG);
+    expect(burnLog.address).equal(ERC1155_CONTRACT);
+    expect(burnLog.topics[0]).equal(TRANSFER_BATCH_SIG);
     // operator and from are both the same address for this burn
-    expect(burnLog.topics[1]!.toLowerCase()).to.include(OPERATOR);
-    expect(burnLog.topics[3]).to.equal(ZERO_ADDR);
+    const operatorTopic = burnLog.topics[1];
+    if (!operatorTopic) throw new Error('Operator topic missing');
+    expect(operatorTopic.toLowerCase()).include(OPERATOR);
+    expect(burnLog.topics[3]).equal(ZERO_ADDR);
   });
 });
