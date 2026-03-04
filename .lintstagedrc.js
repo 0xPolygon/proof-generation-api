@@ -2,13 +2,14 @@
 
 export default {
   '*.{ts,cts,mts,tsx,js,cjs,mjs}': (files) => {
-    // const filteredFiles = files.filter((file) => !file.includes('exampleStr'));
     return files.length > 0
-      ? [`prettier --write ${files.join(' ')}`, `eslint --fix ${files.join(' ')}`]
+      ? [`eslint --fix ${files.join(' ')}`, `prettier --write ${files.join(' ')}`]
       : [];
   },
-  '*.{json,md}': (files) => {
-    // const filteredFiles = files.filter((file) => !file.includes('exampleStr'));
+  '*.{json,yaml,yml}': (files) => {
     return files.length > 0 ? `prettier --write ${files.join(' ')}` : [];
+  },
+  '*.md': (files) => {
+    return files.length > 0 ? `markdownlint-cli2 --fix ${files.join(' ')}` : [];
   }
 };
