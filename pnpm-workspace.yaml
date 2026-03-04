@@ -4,4 +4,6 @@ minimumReleaseAgeExclude:
   - '@polygonlabs/*'
   - '@maticnetwork/*'
   - '@agglayer/*'
+  - '@0xsequence/*'
+  - '@0xtrails/*'
 trustPolicy: no-downgrade
