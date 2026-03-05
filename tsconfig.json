@@ -19,12 +19,7 @@
     // Additional recommended options
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
-
-    // Other outputs (used by tsconfig.build.json)
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true
+    "moduleDetection": "force"
   },
   "exclude": ["node_modules", "dist", "vitest.config.ts"]
 }
