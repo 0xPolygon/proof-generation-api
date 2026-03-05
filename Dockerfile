@@ -7,7 +7,7 @@ RUN apt-get update || : && apt-get install -y \
     libsasl2-modules \
     libssl-dev \
     git
-RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
+RUN npm i -g pnpm@10.30.3
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
