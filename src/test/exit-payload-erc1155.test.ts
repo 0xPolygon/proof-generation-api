@@ -24,8 +24,11 @@ describe('matic exit payload — ERC-1155', { timeout: 60_000 }, () => {
     );
 
     expect(res).property('status', 200);
-    const result: string = res.body.result;
-    expect(result).match(/^0x[0-9a-f]+$/i);
+    expect(res)
+      .nested.property('body.result')
+      .a('string')
+      .match(/^0x[0-9a-f]+$/i);
+    const result: string = res.body.result as string;
 
     const { receiptsRoot, receiptLogs } = decodeExitPayload(result);
 
@@ -38,12 +41,12 @@ describe('matic exit payload — ERC-1155', { timeout: 60_000 }, () => {
       (l) => l.topics[0] === TRANSFER_BATCH_SIG && l.topics[3]?.toLowerCase() === ZERO_ADDR
     );
     if (!burnLog) throw new Error('TransferBatch-to-zero log not found in decoded receipt');
-    expect(burnLog.address).equal(ERC1155_CONTRACT);
-    expect(burnLog.topics[0]).equal(TRANSFER_BATCH_SIG);
+    expect(burnLog).property('address').equal(ERC1155_CONTRACT);
+    expect(burnLog).nested.property('topics[0]').equal(TRANSFER_BATCH_SIG);
     // operator and from are both the same address for this burn
     const operatorTopic = burnLog.topics[1];
     if (!operatorTopic) throw new Error('Operator topic missing');
     expect(operatorTopic.toLowerCase()).include(OPERATOR);
-    expect(burnLog.topics[3]).equal(ZERO_ADDR);
+    expect(burnLog).nested.property('topics[3]').equal(ZERO_ADDR);
   });
 });

@@ -6,9 +6,9 @@ on a dedicated backend server. Proof generation and block inclusion check are so
 ## Installation
 
 ```bash
-$ git clone https://github.com/maticnetwork/proof-generation-api
-$ cd proof-generation-api
-$ bun install
+git clone https://github.com/maticnetwork/proof-generation-api
+cd proof-generation-api
+pnpm install
 
 ```
 
@@ -18,14 +18,14 @@ For development
 
 ```bash
 # For APIs
-$ bun run dev
+$ pnpm run dev
 ```
 
 For production
 
 ```bash
 # For APIs
-$ bun run start
+$ pnpm run start
 ```
 
 ## API Endpoints
@@ -62,21 +62,21 @@ The following endpoints with the exception of "list all" and "healthcheck" are w
        - required: true
 
   - successful response body:
-    ```
-      {
-        "headerBlockNumber": hex value of the header block number,
-        "blockNumber": queried block number,
-        "start": start block number of the range which includes the queried block number,
-        "end": end block number of the range which includes the queried block number,
-        "proposer": proposer's address,
-        "root": root of the checkpoint,
-        "createdAt": checkpoint timestamp,
-        "message": "success"
-      }
-    ```
+
     ```json
-    // "error: true" is deprecated
-    // If the block is not chekpointed yet, only the message param will be sent
+    {
+      "headerBlockNumber": "hex value of the header block number",
+      "blockNumber": "queried block number",
+      "start": "start block number of the range",
+      "end": "end block number of the range",
+      "proposer": "proposer's address",
+      "root": "root of the checkpoint",
+      "createdAt": "checkpoint timestamp",
+      "message": "success"
+    }
+    ```
+
+    ```json
     {
       "message": "No block found"
     }
@@ -106,11 +106,12 @@ The following endpoints with the exception of "list all" and "healthcheck" are w
        - required: false
 
   - successful response body:
-    ```
-      {
-        "message": "Payload generation success",
-        "result": exit proof
-      }
+
+    ```json
+    {
+      "message": "Payload generation success",
+      "result": "exit proof"
+    }
     ```
 
 ### All Exit Payloads
@@ -132,11 +133,12 @@ The following endpoints with the exception of "list all" and "healthcheck" are w
        - required: true
 
   - successful response body:
-    ```
-      {
-        "message": "Payload generation success",
-        "result": [exit proof 1, exit proof 2, ...]
-      }
+
+    ```json
+    {
+      "message": "Payload generation success",
+      "result": ["exit proof 1", "exit proof 2"]
+    }
     ```
 
 ### Fast Merkle Proof
@@ -161,8 +163,9 @@ The following endpoints with the exception of "list all" and "healthcheck" are w
        - required: true
 
   - successful response body:
-    ```
-      {
-        "proof": proof value
-      }
+
+    ```json
+    {
+      "proof": "proof value"
+    }
     ```

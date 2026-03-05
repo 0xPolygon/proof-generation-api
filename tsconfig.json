@@ -1,28 +1,11 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
+  "extends": ["@tsconfig/node24", "@tsconfig/node-ts"],
   "compilerOptions": {
-    // File Layout
-    "rootDir": "./src",
-    "outDir": "./dist",
+    "noEmit": true,
 
-    // Environment Settings
-    // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
-    // For nodejs:
-    "lib": ["esnext"],
-    "types": ["node"],
-
-    // Other Outputs
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
-
-    // Stricter Typechecking Options
+    // Additional type-checking strictness beyond @tsconfig/node24 defaults
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-
-    // Style Options
     "noImplicitReturns": true,
     "noImplicitOverride": true,
     "noUnusedLocals": true,
@@ -30,18 +13,18 @@
     "noFallthroughCasesInSwitch": true,
     "noPropertyAccessFromIndexSignature": true,
 
-    // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
-    "verbatimModuleSyntax": true,
+    // Node 24 native TypeScript execution
+    "allowImportingTsExtensions": true,
+
+    // Additional recommended options
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true,
 
-    // This is a TS native service :tada:
-    "allowImportingTsExtensions": true,
-    "erasableSyntaxOnly": true // Ensure all TS syntax does not have runtime impact
+    // Other outputs (used by tsconfig.build.json)
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true
   },
   "exclude": ["node_modules", "dist", "vitest.config.ts"]
 }

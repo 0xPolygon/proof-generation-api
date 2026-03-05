@@ -23,8 +23,8 @@ describe('matic exit payload — all-exit-payloads', { timeout: 60_000 }, () => 
     );
 
     expect(res).property('status', 200);
-    const result: string[] = res.body.result;
-    expect(result).an('array').length(1);
+    expect(res).nested.property('body.result').an('array').length(1);
+    const result: string[] = res.body.result as string[];
 
     // Every payload in the result must encode the same burn receipt.
     for (const payload of result) {
@@ -41,9 +41,9 @@ describe('matic exit payload — all-exit-payloads', { timeout: 60_000 }, () => 
         (l) => l.topics[0] === TRANSFER_SIG && l.topics[2]?.toLowerCase() === ZERO_ADDR
       );
       if (!burnLog) throw new Error('Transfer-to-zero log not found in decoded receipt');
-      expect(burnLog.address).equal(ERC721_CONTRACT);
-      expect(burnLog.topics[0]).equal(TRANSFER_SIG);
-      expect(burnLog.topics[2]).equal(ZERO_ADDR);
+      expect(burnLog).property('address').equal(ERC721_CONTRACT);
+      expect(burnLog).nested.property('topics[0]').equal(TRANSFER_SIG);
+      expect(burnLog).nested.property('topics[2]').equal(ZERO_ADDR);
     }
   });
 });

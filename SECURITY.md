@@ -1,22 +1,22 @@
 # Polygon Technology Security Information
 
-## Link to vulnerability disclosure details (Bug Bounty).
+## Link to vulnerability disclosure details (Bug Bounty)
 
-- Websites and Applications: https://hackerone.com/polygon-technology
-- Smart Contracts: https://immunefi.com/bounty/polygon
+- Websites and Applications: <https://hackerone.com/polygon-technology>
+- Smart Contracts: <https://immunefi.com/bounty/polygon>
 
-## Languages that our team speaks and understands.
+## Languages that our team speaks and understands
 
 Preferred-Languages: en
 
-## Security-related job openings at Polygon.
+## Security-related job openings at Polygon
 
-https://polygon.technology/careers
+<https://polygon.technology/careers>
 
-## Polygon security contact details.
+## Polygon security contact details
 
-security@polygon.technology
+<security@polygon.technology>
 
-## The URL for accessing the security.txt file.
+## The URL for accessing the security.txt file
 
-Canonical: https://polygon.technology/security.txt
+Canonical: <https://polygon.technology/security.txt>

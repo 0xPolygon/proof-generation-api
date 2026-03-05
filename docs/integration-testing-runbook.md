@@ -50,10 +50,10 @@ Most endpoints exist in two network variants:
 
 | Network             | URL prefix       | Chain                      | Explorer                     |
 | ------------------- | ---------------- | -------------------------- | ---------------------------- |
-| Polygon PoS mainnet | `/api/v1/matic/` | Polygon (chain 137)        | https://polygonscan.com      |
-| Amoy testnet        | `/api/v1/amoy/`  | Polygon Amoy (chain 80002) | https://amoy.polygonscan.com |
+| Polygon PoS mainnet | `/api/v1/matic/` | Polygon (chain 137)        | <https://polygonscan.com>      |
+| Amoy testnet        | `/api/v1/amoy/`  | Polygon Amoy (chain 80002) | <https://amoy.polygonscan.com> |
 
-All discovery and validation steps described in this runbook apply to both. To find valid Amoy testnet burn transactions, follow the same steps as mainnet but use **https://amoy.polygonscan.com** and the Amoy child token addresses. Old Amoy blocks (e.g., block 1234) are always checkpointed, just like mainnet.
+All discovery and validation steps described in this runbook apply to both. To find valid Amoy testnet burn transactions, follow the same steps as mainnet but use **<https://amoy.polygonscan.com>** and the Amoy child token addresses. Old Amoy blocks (e.g., block 1234) are always checkpointed, just like mainnet.
 
 ---
 
@@ -74,7 +74,7 @@ Any block older than ~1 hour is guaranteed to be checkpointed. Block numbers 1�
 
 ### Step-by-step: finding a valid block number
 
-1. **Open Polygonscan:** https://polygonscan.com
+1. **Open Polygonscan:** <https://polygonscan.com>
 2. The current block number is shown on the homepage (e.g., 68,000,000). Any block number significantly lower than the current tip will be checkpointed.
 3. **Pick a stable, old block number** — one that is unlikely to be reorganized or reverted. Anything below block 50,000,000 is a safe anchor.
 4. **Validate against production:**
@@ -207,30 +207,31 @@ Every call to `exit-payload` or `all-exit-payloads` returns a hex string that is
 
 ### Finding burn transactions on Polygonscan
 
-**Method A: Search by known burn address**
+#### Method A: Search by known burn address
 
 On Polygon PoS, ERC-20 burns transfer tokens to `0x0000000000000000000000000000000000000000`. On Polygonscan:
 
-1. Go to https://polygonscan.com/token/{childTokenAddress}
+1. Go to <https://polygonscan.com/token/{childTokenAddress}>
 2. Click **Token Transfers** tab
 3. Filter for transfers **To:** `0x0000000000000000000000000000000000000000`
 4. Pick any transaction that is > 2 hours old (to ensure checkpoint inclusion)
 5. Click the transaction to get its hash
 
 **Common child token addresses on Polygon PoS:**
+
 | Token | Polygon PoS Child Address |
 |---|---|
 | WETH | `0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619` |
 | USDC | `0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174` |
 | MATIC (bridged) | `0x0000000000000000000000000000000000001010` |
 
-**Method B: Search by contract function**
+#### Method B: Search by contract function
 
 1. Go to a known bridge child contract on Polygonscan
 2. Click the **Internal Txns** or **Events** tab
 3. Look for `withdraw` or `burn` function calls that are checkpointed
 
-**Method C: Use the production service to probe candidate transactions**
+#### Method C: Use the production service to probe candidate transactions
 
 ```sh
 # Try any candidate tx hash with the ERC-20 Transfer event signature:
@@ -250,16 +251,18 @@ Interpret the result:
 
 1. Find a burn tx on Polygonscan using Method A above.
 2. Call production service to confirm it works and capture the response:
+
    ```sh
    curl "https://proof-generator.polygon.technology/api/v1/matic/exit-payload/{txHash}?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
    ```
+
 3. Copy the `result` field from the response — this is the pinned payload.
 
 ### Step-by-step: ERC-721 burn
 
 ERC-721 `Transfer` events use the **same signature** as ERC-20 (`0xddf252ad...`). The difference is the token type in the contract, not the event.
 
-1. Go to https://polygonscan.com and search for a known ERC-721 child token contract
+1. Go to <https://polygonscan.com> and search for a known ERC-721 child token contract
 2. Look for transactions that call `withdraw` or `withdrawBatch`
 3. Validate the same way as ERC-20
 
@@ -270,6 +273,7 @@ ERC-721 `Transfer` events use the **same signature** as ERC-20 (`0xddf252ad...`)
    - `TransferBatch`: `0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb`
 2. Find a burn by looking for transactions to known ERC-1155 bridge contracts that emit these events with `to = 0x0000...0000`
 3. Call production service:
+
    ```sh
    curl "https://proof-generator.polygon.technology/api/v1/matic/exit-payload/{txHash}?eventSignature=0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb"
    ```
@@ -352,9 +356,11 @@ Same requirements as `exit-payload`, but ideally the target transaction should c
 1. Find a `withdrawBatch` transaction on Polygonscan
 2. Count the matching Transfer events in the Logs tab
 3. Validate:
+
    ```sh
    curl "https://proof-generator.polygon.technology/api/v1/matic/all-exit-payloads/{txHash}?eventSignature=0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
    ```
+
 4. Confirm `result` is an array and `result.length` matches your event count
 5. Pin the `status` and `result.length`, and optionally the full `result` array
 
@@ -476,7 +482,7 @@ npm run get-receipts-root -- --tx {txHash}
 
 Output:
 
-```
+```text
 txHash:       0x1a7b6aba...
 blockNumber:  11619491
 txIndex:      0

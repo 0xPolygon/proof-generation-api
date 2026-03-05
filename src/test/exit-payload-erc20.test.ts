@@ -31,9 +31,9 @@ function assertErc20Payload(result: string) {
     (l) => l.topics[0] === TRANSFER_SIG && l.topics[2]?.toLowerCase() === ZERO_ADDR
   );
   if (!burnLog) throw new Error('Transfer-to-zero log not found in decoded receipt');
-  expect(burnLog.address).equal(WETH_CONTRACT);
-  expect(burnLog.topics[0]).equal(TRANSFER_SIG);
-  expect(burnLog.topics[2]).equal(ZERO_ADDR);
+  expect(burnLog).property('address').equal(WETH_CONTRACT);
+  expect(burnLog).nested.property('topics[0]').equal(TRANSFER_SIG);
+  expect(burnLog).nested.property('topics[2]').equal(ZERO_ADDR);
   // Transfer(from, to, value) — value is ABI-encoded in data as a uint256
   expect(burnLog.data.toLowerCase()).include(AMOUNT_10_WETH);
 }
@@ -45,7 +45,8 @@ describe('matic exit payload — ERC-20', { timeout: 60_000 }, () => {
     );
 
     expect(res).property('status', 200);
-    assertErc20Payload(res.body.result);
+    expect(res).nested.property('body.result').a('string');
+    assertErc20Payload(res.body.result as string);
   });
 
   it('exit payload with tokenIndex argument test', async () => {
@@ -54,6 +55,7 @@ describe('matic exit payload — ERC-20', { timeout: 60_000 }, () => {
     );
 
     expect(res).property('status', 200);
-    assertErc20Payload(res.body.result);
+    expect(res).nested.property('body.result').a('string');
+    assertErc20Payload(res.body.result as string);
   });
 });
