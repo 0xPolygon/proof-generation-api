@@ -42,6 +42,15 @@ Run tests against a deployed instance:
 TEST_BASE_URL=https://proof-generator.polygon.technology pnpm test
 ```
 
+Run tests against the local Docker image (mirrors the CI `docker` job):
+
+```bash
+docker build -t proof-generation-api .
+docker run --rm --env-file .env -p 5000:5000 -d --name proof-gen-test proof-generation-api
+TEST_BASE_URL=http://localhost:5000 pnpm test
+docker stop proof-gen-test
+```
+
 ## Architecture
 
 **Entry point:** `src/bin/apiServer.ts` — imports `src/instrument.ts` (Sentry, must load first) then calls `startApiServer()` from `src/index.ts`.

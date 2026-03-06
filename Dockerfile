@@ -1,15 +1,18 @@
 FROM node:24-bookworm-slim
 WORKDIR /app
-RUN apt-get update || : && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     build-essential \
     libsasl2-dev \
     libsasl2-modules \
     libssl-dev \
-    git
+    git \
+    && rm -rf /var/lib/apt/lists/*
 RUN npm i -g pnpm@10.30.3
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
-COPY . .
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
+COPY src/ ./src/
+RUN addgroup --system app && adduser --system --ingroup app app
+USER app
 EXPOSE 5000
 ENTRYPOINT [ "node", "src/bin/apiServer.ts" ]
