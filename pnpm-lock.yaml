@@ -12,11 +12,11 @@ importers:
         specifier: ^8.4.1
         version: 8.4.2(zod@4.3.6)
       '@maticnetwork/maticjs':
-        specifier: 3.9.6
-        version: 3.9.6
+        specifier: 3.9.7
+        version: 3.9.7
       '@maticnetwork/maticjs-ethers':
         specifier: ^1.1.0
-        version: 1.1.0(@maticnetwork/maticjs@3.9.6)
+        version: 1.1.0(@maticnetwork/maticjs@3.9.7)
       '@scalar/express-api-reference':
         specifier: ^0.8.45
         version: 0.8.46
@@ -631,8 +631,8 @@ packages:
     peerDependencies:
       '@maticnetwork/maticjs': ^3.2.5
 
-  '@maticnetwork/maticjs@3.9.6':
-    resolution: {integrity: sha512-eTK8Aa+EyBdpX7OxuiSvUEXvnrDSXe+QvQgC6dP1eeSQO8ZYCBE+iI/LZbyldRlKcjZqZVDA6JnodjNBIuK+ww==}
+  '@maticnetwork/maticjs@3.9.7':
+    resolution: {integrity: sha512-dyboO3XCfpf5MOadHY/7N8oajKZD33EOdzGzBS1g9Bbuzdos0rwmaMWpWvpm6XAJe41xkiq779W4iEhuZqvDQw==}
     engines: {node: '>=8.0.0'}
 
   '@napi-rs/wasm-runtime@0.2.12':
@@ -4312,15 +4312,15 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
-  '@maticnetwork/maticjs-ethers@1.1.0(@maticnetwork/maticjs@3.9.6)':
+  '@maticnetwork/maticjs-ethers@1.1.0(@maticnetwork/maticjs@3.9.7)':
     dependencies:
-      '@maticnetwork/maticjs': 3.9.6
+      '@maticnetwork/maticjs': 3.9.7
       ethers: 5.5.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@maticnetwork/maticjs@3.9.6':
+  '@maticnetwork/maticjs@3.9.7':
     dependencies:
       '@ethereumjs/block': 5.3.0
       '@ethereumjs/trie': 6.2.1
