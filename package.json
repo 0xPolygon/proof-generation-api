@@ -17,7 +17,8 @@
     "start": "node src/bin/apiServer.ts",
     "dev": "dotenvx run -- nodemon -x \"node\" src/bin/apiServer.ts",
     "prepare": "husky",
-    "get-receipts-root": "dotenvx run -- node src/scripts/get-receipts-root.ts"
+    "get-receipts-root": "dotenvx run -- node src/scripts/get-receipts-root.ts",
+    "ci:publish": "pnpm publish"
   },
   "engines": {
     "node": ">=24.12.0"
@@ -25,6 +26,7 @@
   "packageManager": "pnpm@10.30.3",
   "main": "src/bin/apiServer.ts",
   "devDependencies": {
+    "@changesets/cli": "^2.27.0",
     "@commitlint/cli": "^19.0.0",
     "@commitlint/config-conventional": "^19.0.0",
     "@dotenvx/dotenvx": "^1.51.4",

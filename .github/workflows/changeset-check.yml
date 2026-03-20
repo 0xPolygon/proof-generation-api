@@ -1,0 +1,47 @@
+name: Changeset check
+
+on:
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check:
+    name: Require changeset
+    if: "!startsWith(github.head_ref, 'changeset-release')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0 # Required: changesets needs full history to find where HEAD diverged from origin/master
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check for changeset
+        id: check
+        run: pnpm exec changeset status --since=origin/master
+        continue-on-error: true
+
+      - name: Manage changeset comment
+        if: steps.check.outcome == 'success' || steps.check.outcome == 'failure'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const fn = require('./.github/scripts/upsert-changeset-comment.cjs')
+            const passed = '${{ steps.check.outcome }}' === 'success'
+            await fn({ github, context, passed })
+
+      - name: Fail if no changeset
+        if: steps.check.outcome == 'failure'
+        run: exit 1

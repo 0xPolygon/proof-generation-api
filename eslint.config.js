@@ -1,8 +1,9 @@
-import { recommended, javascript, typescript } from '@polygonlabs/apps-team-lint';
+import { defineConfig } from 'eslint/config';
 
-export default [
-  ...recommended(),
-  ...javascript({ globals: 'node' }),
-  ...typescript({ globals: 'node', tsconfigRootDir: import.meta.dirname }),
+import { recommended, typescript } from '@polygonlabs/apps-team-lint';
+
+export default defineConfig([
+  ...recommended({ globals: 'node' }),
+  ...typescript(),
   { ignores: ['.claude/**', '**/generated/**', '**/docs/html/**/*', 'vitest.config.ts'] }
-];
+]);
