@@ -18,7 +18,10 @@ import {
   generateAllExitPayloads
 } from '../services/v1ProofGenerationServices.ts';
 
-const logger = getLogger();
+let _logger: ReturnType<typeof getLogger> | undefined;
+const logger = new Proxy({} as ReturnType<typeof getLogger>, {
+  get: (_, key) => Reflect.get((_logger ??= getLogger()), key as PropertyKey)
+});
 const router = Router();
 
 const networkDetails = {

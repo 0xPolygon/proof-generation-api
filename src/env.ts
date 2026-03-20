@@ -62,21 +62,33 @@ const BooleanOrBooleanStringSchema = z
     throw new Error(`Expected boolean or boolean string, got: ${typeof val}`);
   });
 
-export const env = createEnv({
-  server: {
-    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-    NAME: z.string().default('Proof Generation API'),
-    PORT: z.coerce.number().default(5000),
-    ETHEREUM_RPC: z.string().transform(isHttpsJsonStringArray),
-    SEPOLIA_RPC: z.string().transform(isHttpsJsonStringArray),
-    MATIC_RPC: z.string().transform(isHttpsJsonStringArray),
-    AMOY_RPC: z.string().transform(isHttpsJsonStringArray),
-    ZKEVM_MAINNET_URL: z.string(),
-    ZKEVM_TESTNET_URL: z.string(),
-    ERPC_SECRET_TOKEN: z.string().optional(),
-    SENTRY_DSN: z.string().optional(),
-    PRETTY_LOGS: BooleanOrBooleanStringSchema.default(false)
-  },
-  runtimeEnv: process.env,
-  emptyStringAsUndefined: true
-});
+// Wrapped in a function so createEnv() — and therefore Zod validation — is
+// deferred to the first call of getEnv(). Importing this module has no side
+// effects, which means test suites running against TEST_BASE_URL can import
+// the full application module graph without requiring service env vars.
+function buildEnv() {
+  return createEnv({
+    server: {
+      NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+      NAME: z.string().default('Proof Generation API'),
+      PORT: z.coerce.number().default(5000),
+      ETHEREUM_RPC: z.string().transform(isHttpsJsonStringArray),
+      SEPOLIA_RPC: z.string().transform(isHttpsJsonStringArray),
+      MATIC_RPC: z.string().transform(isHttpsJsonStringArray),
+      AMOY_RPC: z.string().transform(isHttpsJsonStringArray),
+      ZKEVM_MAINNET_URL: z.string(),
+      ZKEVM_TESTNET_URL: z.string(),
+      ERPC_SECRET_TOKEN: z.string().optional(),
+      SENTRY_DSN: z.string().optional(),
+      PRETTY_LOGS: BooleanOrBooleanStringSchema.default(false)
+    },
+    runtimeEnv: process.env,
+    emptyStringAsUndefined: true
+  });
+}
+
+export type Env = ReturnType<typeof buildEnv>;
+let _env: Env | undefined;
+export function getEnv(): Env {
+  return (_env ??= buildEnv());
+}

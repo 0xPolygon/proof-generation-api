@@ -2,11 +2,12 @@
 // is initialized before the rest of the module graph loads.
 import * as Sentry from '@sentry/node';
 
-import { env } from './env.ts';
+import { getEnv } from './env.ts';
 
-if (env.SENTRY_DSN) {
+const { SENTRY_DSN, NODE_ENV } = getEnv();
+if (SENTRY_DSN) {
   Sentry.init({
-    dsn: env.SENTRY_DSN,
-    environment: env.NODE_ENV
+    dsn: SENTRY_DSN,
+    environment: NODE_ENV
   });
 }

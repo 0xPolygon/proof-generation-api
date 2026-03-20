@@ -9,7 +9,10 @@ import { ZkEVMDepositSchema } from '../schemas.ts';
 import { bridge, merkelProofGenerator } from '../services/zkEVMProofGenerationServices.ts';
 
 const router = Router();
-const logger = getLogger();
+let _logger: ReturnType<typeof getLogger> | undefined;
+const logger = new Proxy({} as ReturnType<typeof getLogger>, {
+  get: (_, key) => Reflect.get((_logger ??= getLogger()), key as PropertyKey)
+});
 
 router.get('/:network/bridge', async (req: Request, res: Response) => {
   try {

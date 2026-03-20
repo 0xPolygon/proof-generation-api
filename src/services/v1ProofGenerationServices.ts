@@ -4,7 +4,12 @@ import { InfoError } from '../helpers/errorHelper.ts';
 import { initMatic, convert } from '../helpers/maticClient.ts';
 import { getLogger } from '../logger.ts';
 
-const logger = getLogger();
+// Lazy singleton — initialised on first use so that importing this module does
+// not trigger env validation when running tests against TEST_BASE_URL.
+let _logger: ReturnType<typeof getLogger> | undefined;
+const logger = new Proxy({} as ReturnType<typeof getLogger>, {
+  get: (_, key) => Reflect.get((_logger ??= getLogger()), key as PropertyKey)
+});
 
 // Returns only the protocol+host of an RPC URL so that secret tokens in query
 // params are never written to logs.
@@ -16,12 +21,14 @@ function rpcOrigin(url: string): string {
   }
 }
 
-const mainnetRPCLength = config.app.maticRPC.length; // total mainnet rpcs
-const mainnetMaxRetries = 2 * mainnetRPCLength; // max mainnet retries
-const testnetAmoyRPCLength = config.app.amoyRPC.length; // total amoy testnet rpcs
-const testnetAmoyMaxRetries = 2 * testnetAmoyRPCLength; // max amoy testnet retries
-
 const getVersionDetails = (version: string) => {
+  // RPC lengths read here (not at module scope) so env validation is deferred
+  // until the first actual request when running against TEST_BASE_URL.
+  const mainnetRPCLength = config.app.maticRPC.length;
+  const mainnetMaxRetries = 2 * mainnetRPCLength;
+  const testnetAmoyRPCLength = config.app.amoyRPC.length;
+  const testnetAmoyMaxRetries = 2 * testnetAmoyRPCLength;
+
   switch (version) {
     case 'v1':
       return {

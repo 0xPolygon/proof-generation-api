@@ -3,7 +3,10 @@ import { errorTypes } from '../constants.ts';
 import { InfoError } from '../helpers/errorHelper.ts';
 import { getLogger } from '../logger.ts';
 
-const logger = getLogger();
+let _logger: ReturnType<typeof getLogger> | undefined;
+const logger = new Proxy({} as ReturnType<typeof getLogger>, {
+  get: (_, key) => Reflect.get((_logger ??= getLogger()), key as PropertyKey)
+});
 
 function getBridgeAPIUrl(network: string) {
   switch (network) {

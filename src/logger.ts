@@ -4,10 +4,9 @@ import * as Sentry from '@sentry/node';
 import { createLogger as createWinstonLogger, format, transports } from 'winston';
 import Transport from 'winston-transport';
 
-import { env } from './env.ts';
+import { getEnv } from './env.ts';
 
 const { combine, json, prettyPrint, colorize, errors } = format;
-const { PRETTY_LOGS } = env;
 
 // Forwards error-level log entries to Sentry. Matches master branch behaviour
 // where @polygonlabs/servercore's Logger.create({ sentry: { level: 'error' } })
@@ -38,6 +37,7 @@ class SentryTransport extends Transport {
 }
 
 export function createLogger(config?: LoggerOptions) {
+  const { PRETTY_LOGS, SENTRY_DSN } = getEnv();
   const formats = [json()];
 
   if (PRETTY_LOGS) {
@@ -53,7 +53,7 @@ export function createLogger(config?: LoggerOptions) {
 
   return createWinstonLogger({
     format: combine(...formats),
-    transports: [new transports.Console(), ...(env.SENTRY_DSN ? [new SentryTransport()] : [])],
+    transports: [new transports.Console(), ...(SENTRY_DSN ? [new SentryTransport()] : [])],
     level: 'debug',
     ...config
   });
