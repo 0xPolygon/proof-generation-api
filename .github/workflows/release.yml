@@ -8,7 +8,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  id-token: write # required for GCP OIDC (docker-release workflow triggered by tags)
 
 jobs:
   release:
