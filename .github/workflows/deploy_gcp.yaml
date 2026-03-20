@@ -1,8 +1,7 @@
-name: Proof Gen API Deploy docker image to GCP
+name: Proof Gen API Deploy docker image to GCP (legacy)
+# Superseded by docker-release.yml which is triggered by changeset version tags.
+# Kept as a manual fallback for emergency deploys outside the release pipeline.
 on:
-  push:
-    branches:
-      - master
   workflow_dispatch:
     inputs:
       tag:

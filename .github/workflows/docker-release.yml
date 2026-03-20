@@ -1,0 +1,47 @@
+name: Docker release
+
+on:
+  push:
+    tags:
+      - 'proof-generation-api@[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Changeset tag to build (e.g. proof-generation-api@1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.resolve.outputs.image_tag }}
+      checkout_ref: ${{ steps.resolve.outputs.checkout_ref }}
+    steps:
+      - name: Resolve version from tag
+        id: resolve
+        env:
+          # inputs.tag is user-controlled — assign to env var before shell use
+          TAG_INPUT: ${{ inputs.tag || '' }}
+        run: |
+          if [ -n "${TAG_INPUT}" ]; then
+            REF="${TAG_INPUT}"
+          else
+            REF="${GITHUB_REF_NAME}"
+          fi
+          VERSION="${REF##*@}"
+          echo "image_tag=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=${REF}" >> "$GITHUB_OUTPUT"
+
+  docker-release:
+    needs: resolve
+    uses: 0xPolygon/pipelines/.github/workflows/gcp_pipeline_release_image.yaml@main
+    secrets: inherit
+    with:
+      image_name: 'proof-generation-api'
+      image_tag: ${{ needs.resolve.outputs.image_tag }}
+      checkout_ref: ${{ needs.resolve.outputs.checkout_ref }}

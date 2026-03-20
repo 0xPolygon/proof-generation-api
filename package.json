@@ -18,7 +18,7 @@
     "dev": "dotenvx run -- nodemon -x \"node\" src/bin/apiServer.ts",
     "prepare": "husky",
     "get-receipts-root": "dotenvx run -- node src/scripts/get-receipts-root.ts",
-    "ci:publish": "pnpm publish"
+    "ci:publish": "pnpm exec changeset publish"
   },
   "engines": {
     "node": ">=24.12.0"
