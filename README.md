@@ -1,171 +1,202 @@
 # proof-generation-api
 
-This repository contains Proof Generation API to fetch data to support Matic SDK. The Proof Generation API primarily helps the Matic SDK by executing a few heavy processes
-on a dedicated backend server. Proof generation and block inclusion check are some of the endpoints on this Proof Generation API. The logic behind these API's involves making several RPC calls to the Polygon chain in order to generate the proof or check block checkpoint inclusion
+Proof generation and block inclusion check API for the Polygon PoS and zkEVM bridge. The service makes RPC calls to the Polygon chain to generate proofs and verify checkpoint inclusion, primarily to support the Matic SDK.
 
-## Installation
+Interactive API docs are available at `/api/docs` when the server is running.
+
+## Prerequisites
+
+- Node.js 24 (see `.nvmrc`; `nvm use` to switch automatically)
+- pnpm (managed via corepack)
+
+## Setup
 
 ```bash
-git clone https://github.com/maticnetwork/proof-generation-api
+git clone https://github.com/0xPolygon/proof-generation-api
 cd proof-generation-api
 pnpm install
-
 ```
 
-Create a 'config.yml' file in the Proof Generation Api directory. Refer to 'config.yml.sample' for the example data that needs to be added to 'config.yml'. You can add any number fallback RPCs for polygon mainnet and etheruem to facilitate RPC rotation in case of an error. If you add any other config variables, please make sure you make the necessary changes to "src/config/globals.js".
-
-For development
+Copy `.env.example` to `.env` and fill in the RPC endpoints:
 
 ```bash
-# For APIs
-$ pnpm run dev
+cp .env.example .env
 ```
 
-For production
+Environment variables (all required unless marked optional):
+
+| Variable | Description |
+|----------|-------------|
+| `ETHEREUM_RPC` | JSON array of Ethereum Mainnet RPC URLs (HTTPS only) |
+| `MATIC_RPC` | JSON array of Polygon Mainnet RPC URLs (HTTPS only) |
+| `SEPOLIA_RPC` | JSON array of Sepolia RPC URLs (HTTPS only) |
+| `AMOY_RPC` | JSON array of Polygon Amoy testnet RPC URLs (HTTPS only) |
+| `ZKEVM_MAINNET_URL` | zkEVM Polygon Mainnet bridge API URL |
+| `ZKEVM_TESTNET_URL` | zkEVM Cardona testnet bridge API URL |
+| `PORT` | Port to listen on (default: `5000`) |
+| `SENTRY_DSN` | Sentry DSN for error reporting (optional) |
+| `PRETTY_LOGS` | Set to `true` for human-readable log output in development (optional) |
+
+Multiple RPC URLs per network enable automatic round-robin failover on error.
+
+## Running
 
 ```bash
-# For APIs
-$ pnpm run start
+pnpm run dev      # development server with live reload (requires .env)
+pnpm start        # production server (requires .env)
+```
+
+## Testing
+
+Tests make live RPC calls against the configured endpoints. Run the full suite:
+
+```bash
+pnpm test
+```
+
+Run tests against a deployed instance instead of starting the server locally:
+
+```bash
+TEST_BASE_URL=https://proof-generator.polygon.technology pnpm test
+```
+
+See [docs/integration-testing-runbook.md](docs/integration-testing-runbook.md) for guidance on adding new test cases.
+
+## Docker
+
+```bash
+docker build -t proof-generation-api .
+docker run --rm --env-file .env -p 5000:5000 proof-generation-api
+```
+
+Run the test suite against the Docker container:
+
+```bash
+docker run --rm --env-file .env -p 5000:5000 -d --name proof-gen proof-generation-api
+TEST_BASE_URL=http://localhost:5000 pnpm test
+docker stop proof-gen
 ```
 
 ## API Endpoints
 
-The following endpoints with the exception of "list all" and "healthcheck" are written for Polygon Mainnet. **In order to query the Mumbai Testnet, replace 'matic' in the endpoint path to 'mumbai'.**
+All v1 endpoints support two networks:
+- `matic` — Polygon Mainnet
+- `amoy` — Polygon Amoy testnet (replaces Mumbai)
 
-- Response Statuses:
-  - '200': A successful response
-  - '404': Invalid parameters
-  - '404': No Block found
-  - '500': Internal Server Error
+For zkEVM endpoints, `network` is one of: `mainnet`, `cherry`, `testnet`, `cardona`.
 
-### List all endpoints
+Response status codes:
+- `200` — Success
+- `400` — Invalid parameters (validation error)
+- `404` — No result found (e.g. block not yet checkpointed)
+- `500` — Internal server error
 
-- GET `/`
-  - summary: Check all the endpoints
+### Health check
 
-### Health-check
+`GET /health-check`
 
-- GET `/health-check`
-  - sumamry: Check if the server is running. Returns status 200
+Returns `200` if the server is running.
+
+### Interactive docs
+
+`GET /api/docs`
+
+Scalar-powered interactive API reference, generated from the OpenAPI spec.
+
+`GET /api/openapi.json`
+
+Raw OpenAPI spec.
 
 ### Block inclusion in checkpoint
 
-- GET `/api/v1/matic/block-included/{blockNumber}`
-  - summary: Check if a block is checkpointed
+`GET /api/v1/{network}/block-included/{blockNumber}`
 
-  - description: Checks if a block on Polygon Mainnet has been checkpointed to the Ethereum Mainnet by the validators. Also this endpoint returns details of the checkpoint in which the block has been included.
+Checks whether a Polygon block has been checkpointed to Ethereum by the validators.
 
-  - parameters:
-    1. - name: blockNumber
-       - in: path
-       - description: block number to query
-       - required: true
+**Response:**
 
-  - successful response body:
+```json
+{
+  "headerBlockNumber": "0x...",
+  "blockNumber": "1234",
+  "start": "1200",
+  "end": "1300",
+  "proposer": "0x...",
+  "root": "0x...",
+  "createdAt": "1234567890",
+  "message": "success"
+}
+```
 
-    ```json
-    {
-      "headerBlockNumber": "hex value of the header block number",
-      "blockNumber": "queried block number",
-      "start": "start block number of the range",
-      "end": "end block number of the range",
-      "proposer": "proposer's address",
-      "root": "root of the checkpoint",
-      "createdAt": "checkpoint timestamp",
-      "message": "success"
-    }
-    ```
+### Exit payload
 
-    ```json
-    {
-      "message": "No block found"
-    }
-    ```
+`GET /api/v1/{network}/exit-payload/{burnTxHash}?eventSignature={sig}&tokenIndex={index}`
 
-### Exit Payload
+Returns the payload to pass to the `exit()` function on the RootChainManager contract on Ethereum Mainnet.
 
-- GET `/api/v1/matic/exit-payload/{burnTxHash}?eventSignature={eventSignature}`
-  - summary: Returns the payload to complete the exit/proof submission.
+| Parameter | In | Required | Description |
+|-----------|----|----------|-------------|
+| `burnTxHash` | path | yes | Burn transaction hash |
+| `eventSignature` | query | yes | keccak256 of the Transfer event signature |
+| `tokenIndex` | query | no | Index of the token in the burn transaction's token list |
 
-  - description: Returns the input payload that has to be passed to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
+**Response:**
 
-  - parameters:
-    1. - name: burnTxHash
-       - in: path
-       - description: burn TransactionHash
-       - required: true
+```json
+{
+  "message": "Payload generation success",
+  "result": "0x..."
+}
+```
 
-    2. - name: eventSignature
-       - in: query
-       - description: event signature (keccack256 value of the corresponding Transfer function)
-       - required: true
+### All exit payloads
 
-    3. - name: tokenIndex
-       - in: query
-       - description: Index of the tokenId in the tokenIds list in burnTransaction
-       - required: false
+`GET /api/v1/{network}/all-exit-payloads/{burnTxHash}?eventSignature={sig}`
 
-  - successful response body:
+Returns an array of payloads for all tokens in a burn transaction.
 
-    ```json
-    {
-      "message": "Payload generation success",
-      "result": "exit proof"
-    }
-    ```
+| Parameter | In | Required | Description |
+|-----------|----|----------|-------------|
+| `burnTxHash` | path | yes | Burn transaction hash |
+| `eventSignature` | query | yes | keccak256 of the Transfer event signature |
 
-### All Exit Payloads
+**Response:**
 
-- GET `/api/v1/matic/all-exit-payloads/{burnTxHash}?eventSignature={eventSignature}`
-  - summary: Returns an array of payloads of all tokens in a particular burnTx to complete the exit/proof submission.
+```json
+{
+  "message": "Payload generation success",
+  "result": ["0x...", "0x..."]
+}
+```
 
-  - description: Returns the input payloads that has to be passed individually to the exit() function on the RootChainManager contract on the Ethereum Mainnet.
+### Fast merkle proof
 
-  - parameters:
-    1. - name: burnTxHash
-       - in: path
-       - description: burn TransactionHash
-       - required: true
+`GET /api/v1/{network}/fast-merkle-proof?start={start}&end={end}&number={blockNumber}`
 
-    2. - name: eventSignature
-       - in: query
-       - description: event signature (keccack256 value of the corresponding Transfer function)
-       - required: true
+Returns the block proof using a minimal-RPC algorithm. Can be used to construct the final exit payload.
 
-  - successful response body:
+| Parameter | In | Required | Description |
+|-----------|----|----------|-------------|
+| `start` | query | yes | Start block of the header block range |
+| `end` | query | yes | End block of the header block range |
+| `number` | query | yes | Block number to prove |
 
-    ```json
-    {
-      "message": "Payload generation success",
-      "result": ["exit proof 1", "exit proof 2"]
-    }
-    ```
+**Response:**
 
-### Fast Merkle Proof
+```json
+{
+  "proof": "0x..."
+}
+```
 
-- GET `/api/v1/matic/fast-merkle-proof?start={Start}&end={End}&number={BlockNumber}`
-  - summary: Returns the fast merkle block proof.
+### zkEVM bridge deposit
 
-  - description: Returns the block proof by making use of an optimised logic that gets the block details with minimum possible RPC calls to the Polygon Mainnet. This block proof can be further used to create the final payload that has to be used to complete the exit/proof submission step on the Ethereum mainnet.
+`GET /api/zkevm/{network}/bridge?net_id={networkId}&deposit_cnt={depositCount}`
 
-  - parameters:
-    1. - name: start
-       - in: query
-       - description: start block number of the range which includes the block number to query
-       - required: true
-    2. - name: end
-       - in: query
-       - description: end block number of the range which includes the block number to query
-       - required: true
-    3. - name: number
-       - in: query
-       - description: block number to query
-       - required: true
+Fetches bridge deposit data from the zkEVM bridge API.
 
-  - successful response body:
+### zkEVM merkle proof
 
-    ```json
-    {
-      "proof": "proof value"
-    }
-    ```
+`GET /api/zkevm/{network}/merkle-proof?net_id={networkId}&deposit_cnt={depositCount}`
+
+Fetches the merkle proof for a zkEVM bridge deposit.
