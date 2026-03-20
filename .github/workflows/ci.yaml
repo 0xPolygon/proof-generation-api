@@ -59,7 +59,7 @@ jobs:
             -e ZKEVM_TESTNET_URL \
             proof-generation-api
       - name: Wait for server
-        run: curl --retry 10 --retry-delay 2 --retry-connrefused -sf http://localhost:5000/health-check
+        run: curl --retry 10 --retry-delay 2 --retry-all-errors -sf http://localhost:5000/health-check
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -71,4 +71,4 @@ jobs:
         run: TEST_BASE_URL=http://localhost:5000 pnpm test
       - name: Stop container
         if: always()
-        run: docker stop proof-gen
+        run: docker logs proof-gen && docker stop proof-gen
