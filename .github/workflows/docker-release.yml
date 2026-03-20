@@ -40,7 +40,8 @@ jobs:
   docker-release:
     needs: resolve
     uses: 0xPolygon/pipelines/.github/workflows/gcp_pipeline_release_image.yaml@main
-    secrets: inherit
+    secrets:
+      build_params_gh_secret_keys: ${{ secrets.build_params_gh_secret_keys }}
     with:
       image_name: 'proof-generation-api'
       image_tag: ${{ needs.resolve.outputs.image_tag }}
