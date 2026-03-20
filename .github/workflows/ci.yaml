@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [master]
 
+env:
+  AMOY_RPC: '["https://rpc-amoy.polygon.technology"]'
+  ETHEREUM_RPC: '["https://rpc.polygon.tools/internal/evm/1?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+  MATIC_RPC: '["https://rpc.polygon.tools/internal/evm/137?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+  SEPOLIA_RPC: '["https://rpc.polygon.tools/internal/evm/11155111?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+  ZKEVM_MAINNET_URL: https://bridge-api.zkevm-rpc.com
+  ZKEVM_TESTNET_URL: https://bridge-api.cardona.zkevm-rpc.com
+
 jobs:
   main:
     runs-on: ubuntu-latest
@@ -23,13 +31,6 @@ jobs:
       - name: Check lint
         run: pnpm run lint
       - name: Run tests
-        env:
-          AMOY_RPC: '["https://rpc-amoy.polygon.technology"]'
-          ETHEREUM_RPC: '["https://rpc.polygon.tools/internal/evm/1?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
-          MATIC_RPC: '["https://rpc.polygon.tools/internal/evm/137?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
-          SEPOLIA_RPC: '["https://rpc.polygon.tools/internal/evm/11155111?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
-          ZKEVM_MAINNET_URL: https://bridge-api.zkevm-rpc.com
-          ZKEVM_TESTNET_URL: https://bridge-api.cardona.zkevm-rpc.com
         run: pnpm run test
 
   docker:
@@ -41,13 +42,6 @@ jobs:
       - name: Build Docker image
         run: docker build -t proof-generation-api .
       - name: Start container
-        env:
-          AMOY_RPC: '["https://rpc-amoy.polygon.technology"]'
-          ETHEREUM_RPC: '["https://rpc.polygon.tools/internal/evm/1?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
-          MATIC_RPC: '["https://rpc.polygon.tools/internal/evm/137?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
-          SEPOLIA_RPC: '["https://rpc.polygon.tools/internal/evm/11155111?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
-          ZKEVM_MAINNET_URL: https://bridge-api.zkevm-rpc.com
-          ZKEVM_TESTNET_URL: https://bridge-api.cardona.zkevm-rpc.com
         run: |
           docker run -d --name proof-gen \
             -p 5000:5000 \
