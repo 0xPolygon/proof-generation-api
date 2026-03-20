@@ -1,8 +1,31 @@
 # proof-generation-api
 
-Proof generation and block inclusion check API for the Polygon PoS and zkEVM bridge. The service makes RPC calls to the Polygon chain to generate proofs and verify checkpoint inclusion, primarily to support the Matic SDK.
+Backend service for Polygon bridge exit proof generation. Consumed primarily by the Matic SDK.
 
 Interactive API docs are available at `/api/docs` when the server is running.
+
+## Why this service exists
+
+### The Polygon PoS bridge exit flow
+
+Moving assets from Polygon back to Ethereum is a two-step process:
+
+1. **Burn** — the assets are burned on Polygon.
+2. **Exit** — you call `exit()` on the `RootChainManager` contract on Ethereum, which verifies the burn and releases the assets.
+
+The exit step requires a cryptographic proof: specifically, that your burn transaction was included in a Polygon block that Ethereum validators have already **checkpointed** (attested to on-chain). Without a valid checkpoint, the proof cannot be generated — which is why the `block-included` endpoint is a prerequisite gate, not just informational. The intended flow is:
+
+> burn → poll `block-included` until checkpointed → call `exit-payload` → submit to Ethereum
+
+Generating the exit payload involves fetching the transaction receipt, constructing a Merkle proof of its inclusion in the Polygon block, locating the correct checkpoint header, and encoding everything into the exact byte format the contract expects. This requires many sequential RPC calls and non-trivial computation — too heavy to do reliably in a browser or mobile client on demand. This service does that work server-side so the SDK only needs to make a single HTTP request.
+
+### Why you should configure multiple RPC URLs
+
+Proof generation makes many sequential calls to the same RPC endpoint. If any call fails mid-sequence, the entire proof attempt fails and has to restart. Configuring multiple RPC URLs per network enables automatic failover across providers, which is what makes the service reliable in practice rather than fragile. Configure at least two URLs per network in production.
+
+### zkEVM endpoints are different
+
+The zkEVM bridge uses a different mechanism — validity proofs rather than fraud proofs and checkpoints. The zkEVM endpoints in this service do not construct Merkle proofs from chain data; they proxy the zkEVM bridge API directly. They exist here as a convenience so the Matic SDK has a single backend to talk to for all bridge operations.
 
 ## Prerequisites
 
