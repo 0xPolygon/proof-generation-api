@@ -18,8 +18,11 @@ jobs:
     # - It's a regular issue (not a PR)
     # - The PR is from the same repo (not a fork)
     # - The comment author has write access or higher
+    # Skip changeset-release branches — those are automated version-bump PRs.
+    # github.head_ref is not set for comment/review events; use event.pull_request.head.ref instead
+    # (empty string for non-PR events, so the startsWith check safely passes through).
     if: |
-      (
+      !startsWith(github.event.pull_request.head.ref, 'changeset-release/') && (
         (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
         (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
         (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
