@@ -1,18 +1,16 @@
 import { createEnv } from '@t3-oss/env-core';
 import { z } from 'zod';
 
-// Validates that val is a JSON-encoded string array where every URL uses https://.
-// This prevents silent degradation from misconfigured protocols: ethers.js
-// JsonRpcProvider does not follow 301 redirects and throws event="noNetwork"
-// instead of failing loudly when given an http:// endpoint.
-const isHttpsJsonStringArray = (val: string, ctx: z.RefinementCtx) => {
+// Validates that val is a JSON-encoded string array of RPC URLs.
+// rpc.polygon.tools requires https:// — ethers.js JsonRpcProvider does not follow
+// 301 redirects and throws event="noNetwork" instead of failing loudly when given
+// an http:// endpoint, and that host does not accept plain http. All other hosts
+// accept either protocol (e.g. in-cluster proxies use http://).
+const parseRpcUrlArray = (val: string, ctx: z.RefinementCtx) => {
   try {
     const parsed = JSON.parse(val);
     if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === 'string')) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Must be a valid JSON string array.'
-      });
+      ctx.addIssue('Must be a valid JSON string array.');
       return z.NEVER;
     }
     for (const url of parsed as string[]) {
@@ -20,27 +18,26 @@ const isHttpsJsonStringArray = (val: string, ctx: z.RefinementCtx) => {
       try {
         u = new URL(url);
       } catch {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Contains an invalid URL: "${url}"`
-        });
+        ctx.addIssue(`Contains an invalid URL: "${url}"`);
         return z.NEVER;
       }
-      if (u.protocol !== 'https:') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          // Log only the origin — never the full URL, which may contain secret tokens.
-          message: `Contains a non-HTTPS URL: "${u.origin}". All RPC endpoints must use https://.`
-        });
+      if (u.hostname === 'rpc.polygon.tools' && u.protocol !== 'https:') {
+        // Log only the origin — never the full URL, which may contain secret tokens.
+        ctx.addIssue(
+          `Contains a non-HTTPS URL: "${u.origin}". rpc.polygon.tools requires https://.`
+        );
+        return z.NEVER;
+      }
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') {
+        ctx.addIssue(
+          `Contains a URL with an unsupported protocol: "${u.origin}". Use https:// or http://.`
+        );
         return z.NEVER;
       }
     }
     return parsed as string[];
   } catch {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Must be valid JSON.'
-    });
+    ctx.addIssue('Must be valid JSON.');
     return z.NEVER;
   }
 };
@@ -72,10 +69,10 @@ function buildEnv() {
       NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
       NAME: z.string().default('Proof Generation API'),
       PORT: z.coerce.number().default(5000),
-      ETHEREUM_RPC: z.string().transform(isHttpsJsonStringArray),
-      SEPOLIA_RPC: z.string().transform(isHttpsJsonStringArray),
-      MATIC_RPC: z.string().transform(isHttpsJsonStringArray),
-      AMOY_RPC: z.string().transform(isHttpsJsonStringArray),
+      ETHEREUM_RPC: z.string().transform(parseRpcUrlArray),
+      SEPOLIA_RPC: z.string().transform(parseRpcUrlArray),
+      MATIC_RPC: z.string().transform(parseRpcUrlArray),
+      AMOY_RPC: z.string().transform(parseRpcUrlArray),
       ZKEVM_MAINNET_URL: z.string(),
       ZKEVM_TESTNET_URL: z.string(),
       ERPC_SECRET_TOKEN: z.string().optional(),
