@@ -1,5 +1,11 @@
 # proof-generation-api
 
+## 1.0.1
+
+### Patch Changes
+
+- 4e5633e: Allow `http://` RPC URLs; enforce `https://` only for `rpc.polygon.tools`
+
 ## 1.0.0
 
 ### Major Changes
