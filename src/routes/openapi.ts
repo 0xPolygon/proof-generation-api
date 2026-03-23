@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module';
+
 import {
   OpenAPIRegistry,
   OpenApiGeneratorV3,
@@ -6,6 +8,8 @@ import {
 import { apiReference } from '@scalar/express-api-reference';
 import { Router } from 'express';
 import { z } from 'zod';
+
+const { version } = createRequire(import.meta.url)('../../package.json') as { version: string };
 
 import {
   AllExitPayloadsSchema,
@@ -29,14 +33,18 @@ const NotFoundSchema = z
 registry.registerPath({
   method: 'get',
   path: '/v1/{network}/block-included/{blockNumber}',
-  summary: 'Check if a block is included in the PoS chain',
+  summary: 'Check whether a Polygon block has been checkpointed to Ethereum',
+  description:
+    'Prerequisites gate for exit-payload: a block must be checkpointed before a proof can be generated. ' +
+    'Poll this endpoint after a burn transaction until it returns 200, then call exit-payload.',
   request: {
     params: BlockIncludedSchema.shape.params,
     query: BlockIncludedSchema.shape.query
   },
   responses: {
     200: {
-      description: 'Block is included',
+      description:
+        'Block has been checkpointed — includes header block number, range, proposer, and root',
       content: { 'application/json': { schema: SuccessSchema } }
     },
     400: {
@@ -44,7 +52,7 @@ registry.registerPath({
       content: { 'application/json': { schema: ErrorSchema } }
     },
     404: {
-      description: 'Block not found',
+      description: 'Block not yet checkpointed to Ethereum',
       content: { 'application/json': { schema: NotFoundSchema } }
     }
   }
@@ -53,14 +61,17 @@ registry.registerPath({
 registry.registerPath({
   method: 'get',
   path: '/v1/{network}/fast-merkle-proof',
-  summary: 'Generate a fast Merkle proof for a block range',
+  summary: 'Get the block Merkle proof for a header block range',
+  description:
+    'Returns the Merkle proof for a block within a checkpoint header range using a minimal-RPC algorithm. ' +
+    'Used as an intermediate step when constructing an exit payload manually.',
   request: {
     params: FastMerkleProofSchema.shape.params,
     query: FastMerkleProofSchema.shape.query
   },
   responses: {
     200: {
-      description: 'Merkle proof result',
+      description: 'Merkle proof hex string',
       content: {
         'application/json': {
           schema: z.object({ proof: z.string() }).openapi('MerkleProofResponse')
@@ -77,14 +88,17 @@ registry.registerPath({
 registry.registerPath({
   method: 'get',
   path: '/v1/{network}/exit-payload/{burnTxHash}',
-  summary: 'Generate exit payload for a burn transaction',
+  summary: 'Generate the exit payload for a PoS bridge burn transaction',
+  description:
+    'Returns the ABI-encoded payload to pass to the RootChainManager.exit() function on Ethereum. ' +
+    'The block must already be checkpointed — call block-included first and poll until it returns 200.',
   request: {
     params: ExitPayloadSchema.shape.params,
     query: ExitPayloadSchema.shape.query
   },
   responses: {
     200: {
-      description: 'Exit payload',
+      description: 'ABI-encoded exit payload hex string',
       content: { 'application/json': { schema: SuccessSchema } }
     },
     400: {
@@ -92,7 +106,8 @@ registry.registerPath({
       content: { 'application/json': { schema: ErrorSchema } }
     },
     404: {
-      description: 'Transaction not found',
+      description:
+        'No exit data found — block not yet checkpointed or burn transaction has no on-chain exit data',
       content: { 'application/json': { schema: NotFoundSchema } }
     }
   }
@@ -101,14 +116,17 @@ registry.registerPath({
 registry.registerPath({
   method: 'get',
   path: '/v1/{network}/all-exit-payloads/{burnTxHash}',
-  summary: 'Generate all exit payloads for a burn transaction',
+  summary: 'Generate exit payloads for all tokens in a burn transaction',
+  description:
+    'Returns an array of ABI-encoded exit payloads — one per token burned in the transaction. ' +
+    'Use when a single burn transaction transfers multiple tokens.',
   request: {
     params: AllExitPayloadsSchema.shape.params,
     query: AllExitPayloadsSchema.shape.query
   },
   responses: {
     200: {
-      description: 'All exit payloads',
+      description: 'Array of ABI-encoded exit payload hex strings',
       content: { 'application/json': { schema: SuccessSchema } }
     },
     400: {
@@ -116,7 +134,8 @@ registry.registerPath({
       content: { 'application/json': { schema: ErrorSchema } }
     },
     404: {
-      description: 'Transaction not found',
+      description:
+        'No exit data found — block not yet checkpointed or burn transaction has no on-chain exit data',
       content: { 'application/json': { schema: NotFoundSchema } }
     }
   }
@@ -125,14 +144,16 @@ registry.registerPath({
 registry.registerPath({
   method: 'get',
   path: '/zkevm/{network}/bridge',
-  summary: 'Look up a zkEVM bridge deposit',
+  summary: 'Fetch zkEVM bridge deposit data',
+  description:
+    'Proxies the zkEVM bridge API to retrieve deposit information. Does not compute proofs from chain data.',
   request: {
     params: ZkEVMDepositSchema.shape.params,
     query: ZkEVMDepositSchema.shape.query
   },
   responses: {
     200: {
-      description: 'Bridge deposit data',
+      description: 'Bridge deposit data from the zkEVM bridge API',
       content: { 'application/json': { schema: SuccessSchema } }
     },
     400: {
@@ -145,14 +166,17 @@ registry.registerPath({
 registry.registerPath({
   method: 'get',
   path: '/zkevm/{network}/merkle-proof',
-  summary: 'Generate a zkEVM Merkle proof for a deposit',
+  summary: 'Fetch zkEVM Merkle proof for a deposit',
+  description:
+    'Proxies the zkEVM bridge API to retrieve the Merkle proof for a deposit. ' +
+    'Does not compute proofs from chain data — the zkEVM bridge uses validity proofs, not the checkpoint mechanism used by PoS.',
   request: {
     params: ZkEVMDepositSchema.shape.params,
     query: ZkEVMDepositSchema.shape.query
   },
   responses: {
     200: {
-      description: 'Merkle proof data',
+      description: 'Merkle proof data from the zkEVM bridge API',
       content: {
         'application/json': {
           schema: z.object({ proof: z.object({}) }).openapi('ZkEVMMerkleProofResponse')
@@ -170,8 +194,15 @@ const spec = new OpenApiGeneratorV3(registry.definitions).generateDocument({
   openapi: '3.0.0',
   info: {
     title: 'Proof Generation API',
-    version: '1.0.0',
-    description: 'Merkle proof generation and block inclusion checks for the Matic SDK'
+    version,
+    description:
+      'Backend service for Polygon bridge exit proof generation, consumed primarily by the Matic SDK.\n\n' +
+      'The PoS bridge exit flow requires a cryptographic proof that a burn transaction was included in a ' +
+      'checkpointed Polygon block. Generating this proof involves fetching the transaction receipt, ' +
+      'constructing a Merkle proof of block inclusion, locating the correct checkpoint header, and encoding ' +
+      'the result into the exact byte format the RootChainManager contract expects — too many sequential RPC ' +
+      'calls to do reliably client-side. This service does that work server-side so the SDK makes a single HTTP request.\n\n' +
+      'zkEVM endpoints proxy the zkEVM bridge API directly; they do not construct Merkle proofs from chain data.'
   },
   servers: [{ url: '/api' }]
 });
