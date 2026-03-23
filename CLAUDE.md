@@ -61,7 +61,7 @@ docker stop proof-gen-test
 
 **Validation:** Zod v4 schemas in `src/schemas.ts` serve dual duty — runtime validation via `safeParse()` and OpenAPI spec generation via `@asteasolutions/zod-to-openapi`. Each route validates with `Schema.safeParse({ params: req.params, query: req.query })` and on failure passes `result.error.issues[0]?.message` to `handleBadRequest()`.
 
-**Service layer** (`src/services/`): Business logic for proof generation. Uses `@maticnetwork/maticjs` + ethers v5. RPC calls use round-robin failover across configured endpoints (max retries = 2× endpoint count).
+**Service layer** (`src/services/`): Business logic for proof generation. Uses `@maticnetwork/maticjs` + ethers v5. RPC calls use round-robin failover across configured endpoints (max retries = 2× endpoint count). The retry logic indexes both arrays in a coupled pair (e.g. `MATIC_RPC` + `ETHEREUM_RPC`) by the same index, so index `n` in each array must be endpoints from the same provider — switching providers on a retry means incrementing the index in both arrays simultaneously. The two coupled pairs are `MATIC_RPC`/`ETHEREUM_RPC` (mainnet) and `AMOY_RPC`/`SEPOLIA_RPC` (testnet); each pair must have the same number of entries.
 
 **Environment:** `src/env.ts` validates env vars with `@t3-oss/env-core` + Zod. See `.env.example` for the required variables.
 
