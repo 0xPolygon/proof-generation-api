@@ -1,37 +1,40 @@
-import { Logger } from "@polygonlabs/servercore";
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import indexRoutes from './routes'
+import type { Express } from 'express';
 
-const app = new Hono()
+import cors from 'cors';
+import express, { json } from 'express';
 
-async function serve(): Promise<void> {
-    Logger.create({
-        sentry: {
-            dsn: process.env.SENTRY_DSN,
-            level: "error",
-        },
-        console: {
-            level: "debug",
-        },
-    });
+import { getEnv } from './env.ts';
+import { getLogger } from './logger.ts';
+import { indexRoutes } from './routes/index.ts';
 
-    // Middlewares
-    // app.use("*", logger()); // Logs all requests
-    app.use("*", cors()); // Enables CORS for all routes
+/** Useful for testing the app using Supertest (it will automatically listen on a random port) */
+export function getExpressApp() {
+  const app = express();
 
-    // Register routes
-    app.route("/api", indexRoutes);
+  app.use(cors()); // Enables CORS for all routes
+  app.use(json()); // Parse JSON bodies
 
-    app.get("/health-check", (c) => {
-        return c.json({ success: true, message: 'Health Check Success' }, 200)
-    })
+  app.use('/api', indexRoutes);
+
+  app.get('/health-check', (_req, res) => {
+    res.status(200).json({ success: true, message: 'Health Check Success' });
+  });
+
+  return app;
 }
 
-serve();
+/** Production entrypoint; defaults to listening on env.PORT */
+export async function startApiServer(
+  { port, app }: { port: number; app: Express } = {
+    port: getEnv().PORT,
+    app: getExpressApp()
+  }
+): Promise<void> {
+  const logger = getLogger();
+  // Bubble errors calling `listen()` up to callers so they get an async stack trace
+  await new Promise((resolve, reject) => {
+    app.listen(port).once('listening', resolve).once('error', reject);
+  });
 
-export default {
-    port: process.env.PORT || 3000,
-    idleTimeout: 120,
-    fetch: app.fetch,
-};
+  logger.info(`Proof Generation API server has started on port ${port}`);
+}

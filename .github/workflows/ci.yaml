@@ -1,0 +1,68 @@
+name: CI
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches: [master]
+
+env:
+  AMOY_RPC: '["https://rpc-amoy.polygon.technology"]'
+  ETHEREUM_RPC: '["https://rpc.polygon.tools/internal/evm/1?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+  MATIC_RPC: '["https://rpc.polygon.tools/internal/evm/137?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+  SEPOLIA_RPC: '["https://rpc.polygon.tools/internal/evm/11155111?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+  ZKEVM_MAINNET_URL: https://bridge-api.zkevm-rpc.com
+  ZKEVM_TESTNET_URL: https://bridge-api.cardona.zkevm-rpc.com
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check lint
+        run: pnpm run lint
+      - name: Run tests
+        run: pnpm run test
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+      - name: Build Docker image
+        run: docker build -t proof-generation-api .
+      - name: Start container
+        run: |
+          docker run -d --name proof-gen \
+            -p 5000:5000 \
+            -e AMOY_RPC \
+            -e ETHEREUM_RPC \
+            -e MATIC_RPC \
+            -e SEPOLIA_RPC \
+            -e ZKEVM_MAINNET_URL \
+            -e ZKEVM_TESTNET_URL \
+            proof-generation-api
+      - name: Wait for server
+        run: curl --retry 10 --retry-delay 2 --retry-all-errors -sf http://localhost:5000/health-check
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run tests against Docker container
+        run: TEST_BASE_URL=http://localhost:5000 pnpm test
+      - name: Stop container
+        if: always()
+        run: docker logs proof-gen && docker stop proof-gen

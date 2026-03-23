@@ -1,36 +1,58 @@
-import config from '../config'
-import errorTypes from '../config/errorTypes'
-import { initMatic, convert } from '../helpers/maticClient'
-import { InfoError } from '../helpers/errorHelper'
-import { Logger } from '@polygonlabs/servercore'
+import { config } from '../config.ts';
+import { errorTypes } from '../constants.ts';
+import { InfoError } from '../helpers/errorHelper.ts';
+import { initMatic, convert } from '../helpers/maticClient.ts';
+import { getLogger } from '../logger.ts';
 
-const mainnetRPCLength = config.app.maticRPC.length // total mainnet rpcs
-const mainnetMaxRetries = 2 * mainnetRPCLength // max mainnet retries
-const testnetAmoyRPCLength = config.app.amoyRPC.length // total amoy testnet rpcs
-const testnetAmoyMaxRetries = 2 * testnetAmoyRPCLength // max amoy testnet retries
+// Lazy singleton — initialised on first use so that importing this module does
+// not trigger env validation when running tests against TEST_BASE_URL.
+let _logger: ReturnType<typeof getLogger> | undefined;
+const logger = new Proxy({} as ReturnType<typeof getLogger>, {
+  get: (_, key) => Reflect.get((_logger ??= getLogger()), key as PropertyKey)
+});
 
-const getVersionDetails = (version: string) => {
-  switch (version) {
-    case 'v1': return {
-      ethereumRPC: config.app.ethereumRPC,
-      maticRPC: config.app.maticRPC,
-      maxRetries: mainnetMaxRetries,
-      rpcLength: mainnetRPCLength
-    }
-    case 'amoy': return {
-      ethereumRPC: config.app.sepoliaRPC,
-      maticRPC: config.app.amoyRPC,
-      maxRetries: testnetAmoyMaxRetries,
-      rpcLength: testnetAmoyRPCLength
-    }
-    default: return {
-      ethereumRPC: config.app.ethereumRPC,
-      maticRPC: config.app.maticRPC,
-      maxRetries: mainnetMaxRetries,
-      rpcLength: mainnetRPCLength
-    }
+// Returns only the protocol+host of an RPC URL so that secret tokens in query
+// params are never written to logs.
+function rpcOrigin(url: string): string {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return '[unparseable URL]';
   }
 }
+
+const getVersionDetails = (version: string) => {
+  // RPC lengths read here (not at module scope) so env validation is deferred
+  // until the first actual request when running against TEST_BASE_URL.
+  const mainnetRPCLength = config.app.maticRPC.length;
+  const mainnetMaxRetries = 2 * mainnetRPCLength;
+  const testnetAmoyRPCLength = config.app.amoyRPC.length;
+  const testnetAmoyMaxRetries = 2 * testnetAmoyRPCLength;
+
+  switch (version) {
+    case 'v1':
+      return {
+        ethereumRPC: config.app.ethereumRPC,
+        maticRPC: config.app.maticRPC,
+        maxRetries: mainnetMaxRetries,
+        rpcLength: mainnetRPCLength
+      };
+    case 'amoy':
+      return {
+        ethereumRPC: config.app.sepoliaRPC,
+        maticRPC: config.app.amoyRPC,
+        maxRetries: testnetAmoyMaxRetries,
+        rpcLength: testnetAmoyRPCLength
+      };
+    default:
+      return {
+        ethereumRPC: config.app.ethereumRPC,
+        maticRPC: config.app.maticRPC,
+        maxRetries: mainnetMaxRetries,
+        rpcLength: mainnetRPCLength
+      };
+  }
+};
 
 /**
  * isBlockIncluded
@@ -41,42 +63,44 @@ const getVersionDetails = (version: string) => {
  * @returns {Object}
  */
 export async function isBlockIncluded(blockNumber: string, isMainnet: boolean, version: string) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version)
-  const initialRpcIndex = isMainnet
-    ? config.mainnetRpcIndex
-    : config.testnetRpcIndex
+  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
-  let result
+  let result;
 
   // loop over rpcs to retry in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
-    const rpcIndex = (initialRpcIndex + i) % rpcLength
+    const rpcIndex = (initialRpcIndex + i) % rpcLength;
+    const maticRPCUrl = maticRPC[rpcIndex];
+    const ethereumRPCUrl = ethereumRPC[rpcIndex];
+
+    if (!maticRPCUrl || !ethereumRPCUrl) {
+      continue;
+    }
+
     try {
       // initialize matic client
-      const rootChain = await initMatic(
-        isMainnet,
-        version,
-        maticRPC[rpcIndex],
-        ethereumRPC[rpcIndex]
-      ).then((maticClient) => {
-        return maticClient.exitUtil.rootChain
-      })
+      const rootChain = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl).then(
+        (maticClient: any) => {
+          return maticClient.exitUtil.rootChain;
+        }
+      );
 
       // check last child block included
-      const lastChildBlock = await rootChain.getLastChildBlock()
+      const lastChildBlock = await rootChain.getLastChildBlock();
       if (parseInt(lastChildBlock) >= parseInt(blockNumber)) {
         // fetch header block information
         const headerBlockNumber = await rootChain
           .findRootBlockFromChild(blockNumber)
-          .then((result) => {
-            return convert(result)
-          })
+          .then((res: any) => {
+            return convert(res);
+          });
 
         const headerBlock: any = await rootChain
           .method('headerBlocks', headerBlockNumber)
-          .then((method) => {
-            return method.read()
-          })
+          .then((meth: any) => {
+            return meth.read();
+          });
 
         result = {
           headerBlockNumber,
@@ -87,20 +111,31 @@ export async function isBlockIncluded(blockNumber: string, isMainnet: boolean, v
           root: headerBlock.root,
           createdAt: headerBlock.createdAt,
           message: 'success'
-        }
+        };
       } else {
-        throw new InfoError(errorTypes.BlockNotIncluded, 'No block found')
+        throw new InfoError(errorTypes.BlockNotIncluded, 'No block found');
       }
 
-      break
+      break;
     } catch (error: any) {
       if (error.type === errorTypes.BlockNotIncluded || i === maxRetries - 1) {
-        throw error
+        throw error;
       }
-      await new Promise(r => setTimeout(r, 1000));
+      logger.warn({
+        location: 'v1ProofGenerationServices.isBlockIncluded',
+        message: 'RPC attempt failed, retrying',
+        maticRpcOrigin: rpcOrigin(maticRPCUrl),
+        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+        attempt: i + 1,
+        maxRetries,
+        errorEvent: error?.event,
+        errorCode: error?.code,
+        errorMessage: error?.message
+      });
+      await new Promise((r) => setTimeout(r, 1000));
     }
   }
-  return result
+  return result;
 }
 
 /**
@@ -113,38 +148,55 @@ export async function isBlockIncluded(blockNumber: string, isMainnet: boolean, v
  * @param {String} version
  * @returns {Object}
  */
-export async function fastMerkleProof(start: string, end: string, number: number, isMainnet: boolean, version: string) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version)
-  const initialRpcIndex = isMainnet
-    ? config.mainnetRpcIndex
-    : config.testnetRpcIndex
+export async function fastMerkleProof(
+  start: string,
+  end: string,
+  number: number,
+  isMainnet: boolean,
+  version: string
+) {
+  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
-  let proof
+  let proof;
 
   // loop over rpcs to retry in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
-    const rpcIndex = (initialRpcIndex + i) % rpcLength
+    const rpcIndex = (initialRpcIndex + i) % rpcLength;
+    const maticRPCUrl = maticRPC[rpcIndex];
+    const ethereumRPCUrl = ethereumRPC[rpcIndex];
+
+    if (!maticRPCUrl || !ethereumRPCUrl) {
+      continue;
+    }
+
     try {
       // initialize matic client
-      const maticClient = await initMatic(
-        isMainnet,
-        version,
-        maticRPC[rpcIndex],
-        ethereumRPC[rpcIndex]
-      )
+      const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
 
       // get merkle proof
-      proof = await maticClient.exitUtil.getBlockProof(number, { start, end })
+      proof = await maticClient.exitUtil.getBlockProof(number, { start, end });
 
-      break
-    } catch (error) {
+      break;
+    } catch (error: any) {
       if (i === maxRetries - 1) {
-        throw error
+        throw error;
       }
-      await new Promise(r => setTimeout(r, 1000));
+      logger.warn({
+        location: 'v1ProofGenerationServices.fastMerkleProof',
+        message: 'RPC attempt failed, retrying',
+        maticRpcOrigin: rpcOrigin(maticRPCUrl),
+        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+        attempt: i + 1,
+        maxRetries,
+        errorEvent: error?.event,
+        errorCode: error?.code,
+        errorMessage: error?.message
+      });
+      await new Promise((r) => setTimeout(r, 1000));
     }
   }
-  return { proof }
+  return { proof };
 }
 
 /**
@@ -163,71 +215,67 @@ export async function generateExitPayload(
   isMainnet: boolean,
   version: string
 ) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version)
-  const initialRpcIndex = isMainnet
-    ? config.mainnetRpcIndex
-    : config.testnetRpcIndex
+  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
-  let result
-  let isCheckpointed
+  let result;
+  let isCheckpointed;
 
-  Logger.info({
+  logger.info({
     location: 'v1ProofGenerationServices.generateExitPayload',
     data: `max retries ${maxRetries}`
-  })
+  });
 
   // loop over rpcs to retry in case of an in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
-    const rpcIndex = (initialRpcIndex + i) % rpcLength
-    Logger.info({
+    const rpcIndex = (initialRpcIndex + i) % rpcLength;
+    const maticRPCUrl = maticRPC[rpcIndex];
+    const ethereumRPCUrl = ethereumRPC[rpcIndex];
+
+    if (!maticRPCUrl || !ethereumRPCUrl) {
+      continue;
+    }
+
+    logger.info({
       location: 'v1ProofGenerationServices.generateExitPayload',
       data: `rpcIndex ${rpcIndex}`
-    })
+    });
     try {
       // initialize matic client
-      const maticClient = await initMatic(
-        isMainnet,
-        version,
-        maticRPC[rpcIndex],
-        ethereumRPC[rpcIndex]
-      )
+      const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
 
       // check for checkpoint
       if (!isCheckpointed) {
         try {
-          Logger.info({
+          logger.info({
             location: 'v1ProofGenerationServices.generateExitPayload',
             call: 'Checking for checkpoint status',
             burnTxHash
-          })
-          isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash)
-
+          });
+          isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
         } catch (error) {
-          Logger.info({
+          logger.info({
             location: 'v1ProofGenerationServices.generateExitPayload',
             call: 'Checking for checkpoint status failed',
             error
-          })
+          });
           if (i === maxRetries - 1) {
-            throw new InfoError(
-              errorTypes.IncorrectTx,
-              'Incorrect burn transaction'
-            )
+            throw new InfoError(errorTypes.IncorrectTx, 'Incorrect burn transaction');
           }
-          throw new Error('Null receipt received')
+          throw new Error('Null receipt received');
         }
         if (!isCheckpointed) {
           throw new InfoError(
             errorTypes.TxNotCheckpointed,
             'Burn transaction has not been checkpointed yet'
-          )
+          );
         }
       }
-      Logger.info({
+      logger.info({
         location: 'v1ProofGenerationServices.generateExitPayload',
         call: 'checkpoint status',
         isCheckpointed
-      })
+      });
 
       // build payload for exit
       try {
@@ -236,29 +284,25 @@ export async function generateExitPayload(
           eventSignature,
           false,
           tokenIndex
-        )
+        );
       } catch (error: any) {
-        Logger.info({ location: 'v1ProofGenerationServices.generateExitPayload', call: 'catch error', error })
-        if (
-          error.message ===
-          'Index is greater than the number of tokens in this transaction'
-        ) {
-          throw new InfoError(errorTypes.BlockNotIncluded, error.message)
+        if (error.message === 'Index is greater than the number of tokens in this transaction') {
+          throw new InfoError(errorTypes.BlockNotIncluded, error.message);
         }
         if (i === maxRetries - 1) {
           throw new InfoError(
             errorTypes.BlockNotIncluded,
             'Event Signature log not found in tx receipt'
-          )
+          );
         }
-        throw new Error('Null receipt received')
+        throw new Error('Null receipt received');
       }
 
       if (!result) {
-        throw new Error('Null result received')
+        throw new Error('Null result received');
       }
 
-      break
+      break;
     } catch (error: any) {
       if (
         error.type === errorTypes.TxNotCheckpointed ||
@@ -266,12 +310,23 @@ export async function generateExitPayload(
         error.type === errorTypes.BlockNotIncluded ||
         i === maxRetries - 1
       ) {
-        throw error
+        throw error;
       }
-      await new Promise(r => setTimeout(r, 1000));
+      logger.warn({
+        location: 'v1ProofGenerationServices.generateExitPayload',
+        message: 'RPC attempt failed, retrying',
+        maticRpcOrigin: rpcOrigin(maticRPCUrl),
+        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+        attempt: i + 1,
+        maxRetries,
+        errorEvent: error?.event,
+        errorCode: error?.code,
+        errorMessage: error?.message
+      });
+      await new Promise((r) => setTimeout(r, 1000));
     }
   }
-  return { message: 'Payload generation success', result }
+  return { message: 'Payload generation success', result };
 }
 
 /**
@@ -289,49 +344,45 @@ export async function generateAllExitPayloads(
   isMainnet: boolean,
   version: string
 ) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version)
-  const initialRpcIndex = isMainnet
-    ? config.mainnetRpcIndex
-    : config.testnetRpcIndex
+  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
-  let result
-  let isCheckpointed
+  let result;
+  let isCheckpointed;
 
-  Logger.info(`max retries ${maxRetries}, ${ethereumRPC}`)
+  logger.info(`max retries ${maxRetries}, ${ethereumRPC}`);
 
   // loop over rpcs to retry in case of an in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
-    const rpcIndex = (initialRpcIndex + i) % rpcLength
-    Logger.info(`rpcIndex ${rpcIndex}`)
+    const rpcIndex = (initialRpcIndex + i) % rpcLength;
+    const maticRPCUrl = maticRPC[rpcIndex];
+    const ethereumRPCUrl = ethereumRPC[rpcIndex];
+
+    if (!maticRPCUrl || !ethereumRPCUrl) {
+      continue;
+    }
+
     try {
       // initialize matic client
-      const maticClient = await initMatic(
-        isMainnet,
-        version,
-        maticRPC[rpcIndex],
-        ethereumRPC[rpcIndex]
-      )
+      const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
 
       // check for checkpoint
       try {
-        Logger.info(`Checking for checkpoint status ${burnTxHash}`)
-        isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash)
-        Logger.info({ 'isCheckpointed': isCheckpointed })
-      } catch (error) {
-        Logger.info({ error })
+        const safeBurnTxHash = burnTxHash.replace(/[\r\n]/g, '');
+        logger.info(`Checking for checkpoint status ${safeBurnTxHash}`);
+        isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
+        logger.info({ isCheckpointed: isCheckpointed });
+      } catch {
         if (i === maxRetries - 1) {
-          throw new InfoError(
-            errorTypes.IncorrectTx,
-            'Incorrect burn transaction'
-          )
+          throw new InfoError(errorTypes.IncorrectTx, 'Incorrect burn transaction');
         }
-        throw new Error('Null receipt received')
+        throw new Error('Null receipt received');
       }
       if (!isCheckpointed) {
         throw new InfoError(
           errorTypes.TxNotCheckpointed,
           'Burn transaction has not been checkpointed yet'
-        )
+        );
       }
 
       // build payload for exit
@@ -340,34 +391,60 @@ export async function generateAllExitPayloads(
           burnTxHash,
           eventSignature,
           false
-        )
-      } catch (error) {
+        );
+      } catch (buildError: any) {
+        logger.warn({
+          location: 'v1ProofGenerationServices.generateAllExitPayloads',
+          message: 'buildMultiplePayloadsForExit failed',
+          attempt: i + 1,
+          maticRpcOrigin: rpcOrigin(maticRPCUrl),
+          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+          buildErrorMessage: buildError?.message,
+          buildErrorName: buildError?.name
+        });
         if (i === maxRetries - 1) {
           throw new InfoError(
             errorTypes.BlockNotIncluded,
             'Event Signature log not found in tx receipt'
-          )
+          );
         }
-        throw new Error('Null receipt received')
+        throw new Error('Null receipt received');
       }
 
       if (!result) {
-        throw new Error('Null result received')
+        throw new Error('Null result received');
       }
 
-      break
+      break;
     } catch (error: any) {
-      Logger.error({ error })
       if (
         error.type === errorTypes.TxNotCheckpointed ||
         error.type === errorTypes.IncorrectTx ||
         error.type === errorTypes.BlockNotIncluded ||
         i === maxRetries - 1
       ) {
-        throw error
+        logger.error({
+          location: 'v1ProofGenerationServices.generateAllExitPayloads',
+          message: 'All RPC retries exhausted or non-retryable error',
+          errorEvent: error?.event,
+          errorCode: error?.code,
+          errorMessage: error?.message
+        });
+        throw error;
       }
-      await new Promise(r => setTimeout(r, 1000));
+      logger.warn({
+        location: 'v1ProofGenerationServices.generateAllExitPayloads',
+        message: 'RPC attempt failed, retrying',
+        maticRpcOrigin: rpcOrigin(maticRPCUrl),
+        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+        attempt: i + 1,
+        maxRetries,
+        errorEvent: error?.event,
+        errorCode: error?.code,
+        errorMessage: error?.message
+      });
+      await new Promise((r) => setTimeout(r, 1000));
     }
   }
-  return { message: 'Payload generation success', result }
+  return { message: 'Payload generation success', result };
 }

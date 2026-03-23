@@ -1,26 +1,68 @@
 {
   "name": "proof-generation-api",
+  "version": "0.0.1",
   "module": "index.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsup",
-    "start": "bun dist/index.js",
-    "tests": "echo 'Hello unit tests'",
-    "tests:integration": "echo 'Hello integration tests'"
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "lint": "concurrently --group --prefix-colors auto 'pnpm:lint:md' 'pnpm:lint:ts' 'pnpm:typecheck' 'prettier --check .'",
+    "lint:md": "markdownlint-cli2 \"**/*.md\"",
+    "lint:ts": "eslint .",
+    "format": "pnpm run format:md && pnpm run format:ts && prettier --write .",
+    "format:md": "markdownlint-cli2 --fix \"**/*.md\"",
+    "format:ts": "eslint . --fix",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "start": "node src/bin/apiServer.ts",
+    "dev": "dotenvx run -- nodemon -x \"node\" src/bin/apiServer.ts",
+    "prepare": "husky",
+    "get-receipts-root": "dotenvx run -- node src/scripts/get-receipts-root.ts",
+    "ci:publish": "pnpm exec changeset publish"
   },
+  "engines": {
+    "node": ">=24.12.0"
+  },
+  "packageManager": "pnpm@10.30.3",
+  "main": "src/bin/apiServer.ts",
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "@changesets/cli": "^2.27.0",
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "@dotenvx/dotenvx": "^1.51.4",
+    "@polygonlabs/apps-team-lint": "^1.0.0",
+    "@tsconfig/node-ts": "^23.6.4",
+    "@tsconfig/node24": "^24.0.4",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.0.0",
+    "@types/supertest": "^6.0.3",
+    "@types/yargs": "^17.0.35",
+    "concurrently": "^9.2.1",
+    "eslint": "^10.0.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "markdownlint-cli2": "^0.21.0",
+    "nodemon": "^3.1.11",
+    "prettier": "^3.8.0",
+    "supertest": "^7.2.2",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.1",
+    "yargs": "^18.0.0"
   },
   "dependencies": {
-    "@maticnetwork/maticjs": "3.9.6",
+    "@asteasolutions/zod-to-openapi": "^8.4.1",
+    "@maticnetwork/maticjs": "3.9.7",
     "@maticnetwork/maticjs-ethers": "^1.1.0",
-    "@polygonlabs/servercore": "^1.0.0",
+    "@scalar/express-api-reference": "^0.8.45",
+    "@sentry/node": "^10.39.0",
+    "@t3-oss/env-core": "^0.13.10",
+    "cors": "^2.8.5",
     "ethers": "5.5.1",
-    "hono": "^4.9.0",
-    "tsup": "^8.5.0"
+    "express": "^5.2.1",
+    "winston": "^3.19.0",
+    "winston-transport": "^4.9.0",
+    "zod": "^4.3.6"
   }
 }

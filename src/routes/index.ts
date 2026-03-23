@@ -1,10 +1,13 @@
-import { Hono } from "hono";
-import v1Route from './v1'
-import zkEVMRoute from './zkEVM'
+import { Router } from 'express';
 
-const router = new Hono();
+import { openApiRouter } from './openapi.ts';
+import { v1Routes } from './v1.ts';
+import { zkEVMRoutes } from './zkEVM.ts';
 
-router.route('/v1/:network', v1Route)
-router.route('/zkevm/:network', zkEVMRoute)
+const router = Router();
 
-export default router
+router.use('/', openApiRouter);
+router.use('/v1', v1Routes);
+router.use('/zkevm', zkEVMRoutes);
+
+export { router as indexRoutes };

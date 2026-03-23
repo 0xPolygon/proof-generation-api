@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.CHANGESET_RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.CHANGESET_RELEASE_BOT_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 1
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf # v1.7.0
+        id: changesets
+        with:
+          publish: pnpm run ci:publish
+          title: 'changesets: Release / Deploy'
+          commit: 'release: version packages'
+          # github-api mode signs commits with GitHub's GPG key, satisfying the
+          # repository's signed-commits requirement. git-cli (the default) produces
+          # unsigned commits.
+          commitMode: github-api
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Add description to Release / Deploy PR
+        if: steps.changesets.outputs.hasChangesets == 'true'
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.changesets.outputs.pullRequestNumber }}
+        run: |
+          # Fetch the changelog content that changesets just wrote to the PR body
+          CHANGELOG=$(gh pr view "$PR_NUMBER" --json body --jq '.body')
+
+          # Write preamble to a temp file then append the changelog
+          cat > /tmp/pr-body.md << 'PREAMBLE'
+          ## What is this PR?
+
+          This is the automated **Release / Deploy** PR. It is created and updated
+          automatically by the release pipeline as changesets accumulate on `master`.
+          It contains version bumps and updated changelogs.
+
+          ## What happens when you merge?
+
+          Merging triggers the full release and deployment pipeline:
+
+          1. **Git tags** — a version tag is pushed (e.g. `proof-generation-api@2.1.0`)
+          2. **Docker build** — a new image is built tagged with the service version
+             and pushed to GCP Artifact Registry
+          3. **Kargo promotion** — new image is promoted through dev → staging → production
+
+          > [!WARNING]
+          > Only merge when the team is ready for a production release. This PR updates
+          > itself automatically as new changesets land on `master` — there is no need to
+          > close and reopen it.
+
+          ---
+
+          PREAMBLE
+
+          printf '%s\n' "$CHANGELOG" >> /tmp/pr-body.md
+          gh pr edit "$PR_NUMBER" --body-file /tmp/pr-body.md

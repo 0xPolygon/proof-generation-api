@@ -1,65 +1,60 @@
-import type { Context } from 'hono';
+import type { Response } from 'express';
 
 interface ResponseParams {
-  c: Context;
+  res: Response;
   data: any;
   statusCode?: number;
 }
 
 interface ErrorParams {
-  c: Context;
+  res: Response;
   statusCode?: number;
   errMsg?: string;
   err?: string | Error;
 }
 
 // successful response
-export const handleResponse = ({
-  c,
-  data,
-  statusCode = 200
-}: ResponseParams) => {
-  return c.json(data, statusCode as any);
+export const handleResponse = ({ res, data, statusCode = 200 }: ResponseParams) => {
+  return res.status(statusCode).json(data);
 };
 
 // 404 response for hitting an invalid endpoint
 export const handleInvalidEndpoint = ({
-  c,
+  res,
   statusCode = 404,
   errMsg = 'Not Found',
   err = 'Endpoint Not found'
 }: ErrorParams) => {
-  return c.json({
+  return res.status(statusCode).json({
     errMsg,
     msg: err instanceof Error ? err.message : err?.toString() || errMsg
-  }, statusCode as any);
+  });
 };
 
 // 400 response for sending invalid or incomplete params
 export const handleBadRequest = ({
-  c,
+  res,
   statusCode = 400,
   errMsg = 'Bad Request',
   err = 'Bad Request'
 }: ErrorParams) => {
-  return c.json({
+  return res.status(statusCode).json({
     error: true,
     msg: err instanceof Error ? err.message : errMsg || err?.toString()
-  }, statusCode as any);
+  });
 };
-
 
 // Error response handler
 // 500 for server error
 // 404 and 400 for Info errors
 export const handleError = ({
-  c,
+  res,
   statusCode = 500,
   errMsg = 'Something went wrong while computing',
   err = 'error'
 }: ErrorParams) => {
-  return c.json({
+  return res.status(statusCode).json({
     error: true,
     message: err instanceof Error ? err.message : errMsg || err?.toString()
-  }, statusCode as any);
+  });
 };
