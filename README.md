@@ -103,12 +103,14 @@ docker stop proof-gen
 ## API Endpoints
 
 All v1 endpoints support two networks:
+
 - `matic` — Polygon Mainnet
 - `amoy` — Polygon Amoy testnet (replaces Mumbai)
 
 For zkEVM endpoints, `network` is one of: `mainnet`, `cherry`, `testnet`, `cardona`.
 
 Response status codes:
+
 - `200` — Success
 - `400` — Invalid parameters (validation error)
 - `404` — No result found (e.g. block not yet checkpointed)
