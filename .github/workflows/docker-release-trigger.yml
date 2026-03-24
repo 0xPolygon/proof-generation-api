@@ -36,7 +36,7 @@ jobs:
       should_build: ${{ steps.docker-test.outputs.should_build }}
     steps:
       - id: docker-test
-        uses: ./.github/actions/docker-test
+        uses: 0xPolygon/apps-team-workflows/.github/actions/docker-test@main
         with:
           tag: ${{ inputs.tag || '' }}
           test_vars: AMOY_RPC ETHEREUM_RPC MATIC_RPC SEPOLIA_RPC ZKEVM_MAINNET_URL ZKEVM_TESTNET_URL

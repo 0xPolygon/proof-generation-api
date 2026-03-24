@@ -4,6 +4,7 @@ node_modules
 # output
 out
 dist
+!.github/actions/*/dist/
 *.tgz
 
 # code coverage

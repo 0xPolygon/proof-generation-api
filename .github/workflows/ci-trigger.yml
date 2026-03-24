@@ -12,4 +12,4 @@ jobs:
     name: CI - lint / typecheck / test
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/ci
+      - uses: 0xPolygon/apps-team-workflows/.github/actions/ci@main
