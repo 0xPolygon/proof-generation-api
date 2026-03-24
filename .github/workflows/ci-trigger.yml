@@ -11,6 +11,13 @@ jobs:
   ci:
     name: CI - lint / typecheck / test
     runs-on: ubuntu-latest
+    env:
+      AMOY_RPC: '["https://rpc-amoy.polygon.technology"]'
+      ETHEREUM_RPC: '["https://rpc.polygon.tools/internal/evm/1?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+      MATIC_RPC: '["https://rpc.polygon.tools/internal/evm/137?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+      SEPOLIA_RPC: '["https://rpc.polygon.tools/internal/evm/11155111?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+      ZKEVM_MAINNET_URL: https://bridge-api.zkevm-rpc.com
+      ZKEVM_TESTNET_URL: https://bridge-api.cardona.zkevm-rpc.com
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
