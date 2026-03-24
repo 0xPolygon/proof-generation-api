@@ -34,7 +34,7 @@ jobs:
 
       - name: Manage changeset comment
         if: steps.check.outcome == 'success' || steps.check.outcome == 'failure'
-        uses: 0xPolygon/apps-team-workflows/.github/actions/upsert-changeset-comment@main
+        uses: ./.github/actions/upsert-changeset-comment
         with:
           passed: ${{ steps.check.outcome == 'success' }}
 
