@@ -1,0 +1,17 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  release:
+    uses: ./.github/workflows/npm-release.yml
+    secrets:
+      CHANGESET_RELEASE_BOT_APP_ID: ${{ secrets.CHANGESET_RELEASE_BOT_APP_ID }}
+      CHANGESET_RELEASE_BOT_APP_PRIVATE_KEY: ${{ secrets.CHANGESET_RELEASE_BOT_APP_PRIVATE_KEY }}
