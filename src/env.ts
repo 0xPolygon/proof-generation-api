@@ -64,7 +64,7 @@ const BooleanOrBooleanStringSchema = z
 // effects, which means test suites running against TEST_BASE_URL can import
 // the full application module graph without requiring service env vars.
 function buildEnv() {
-  return createEnv({
+  const env = createEnv({
     server: {
       NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
       NAME: z.string().default('Proof Generation API'),
@@ -82,6 +82,26 @@ function buildEnv() {
     runtimeEnv: process.env,
     emptyStringAsUndefined: true
   });
+
+  // The retry logic indexes each coupled pair by the same index (index n = same provider
+  // on both sides). Mismatched lengths mean some retries will silently skip due to
+  // undefined entries, so exhausting retries without ever trying all providers.
+  if (env.ETHEREUM_RPC.length !== env.MATIC_RPC.length) {
+    throw new Error(
+      `ETHEREUM_RPC and MATIC_RPC must have the same number of entries ` +
+        `(got ${env.ETHEREUM_RPC.length} and ${env.MATIC_RPC.length}). ` +
+        `Index n in each array must be endpoints from the same provider.`
+    );
+  }
+  if (env.SEPOLIA_RPC.length !== env.AMOY_RPC.length) {
+    throw new Error(
+      `SEPOLIA_RPC and AMOY_RPC must have the same number of entries ` +
+        `(got ${env.SEPOLIA_RPC.length} and ${env.AMOY_RPC.length}). ` +
+        `Index n in each array must be endpoints from the same provider.`
+    );
+  }
+
+  return env;
 }
 
 export type Env = ReturnType<typeof buildEnv>;

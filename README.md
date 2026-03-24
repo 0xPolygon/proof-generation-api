@@ -23,6 +23,8 @@ Generating the exit payload involves fetching the transaction receipt, construct
 
 Proof generation makes many sequential calls to the same RPC endpoint. If any call fails mid-sequence, the entire proof attempt fails and has to restart. Configuring multiple RPC URLs per network enables automatic failover across providers, which is what makes the service reliable in practice rather than fragile. Configure at least two URLs per network in production.
 
+The failover logic pairs the child-chain and parent-chain arrays by index: `MATIC_RPC[n]` is always used together with `ETHEREUM_RPC[n]`, and `AMOY_RPC[n]` with `SEPOLIA_RPC[n]`. When a retry is needed, both arrays advance to index `n+1` together. This means **index `n` in each coupled pair must be endpoints from the same provider** — if a provider is degraded, both its child-chain and parent-chain endpoints will fail, so the retry correctly skips to the next provider entirely. Mismatching providers at the same index (e.g. provider A for Ethereum and provider B for Polygon at index 0) would defeat the failover: a degraded provider A would cause a retry, which then lands on provider B for Polygon but still uses provider A for Ethereum. The two coupled pairs must also have the same number of entries.
+
 ### zkEVM endpoints are different
 
 The zkEVM bridge uses a different mechanism — validity proofs rather than fraud proofs and checkpoints. The zkEVM endpoints in this service do not construct Merkle proofs from chain data; they proxy the zkEVM bridge API directly. They exist here as a convenience so the Matic SDK has a single backend to talk to for all bridge operations.
@@ -50,17 +52,17 @@ Environment variables (all required unless marked optional):
 
 | Variable | Description |
 |----------|-------------|
-| `ETHEREUM_RPC` | JSON array of Ethereum Mainnet RPC URLs (HTTPS only) |
-| `MATIC_RPC` | JSON array of Polygon Mainnet RPC URLs (HTTPS only) |
-| `SEPOLIA_RPC` | JSON array of Sepolia RPC URLs (HTTPS only) |
-| `AMOY_RPC` | JSON array of Polygon Amoy testnet RPC URLs (HTTPS only) |
+| `ETHEREUM_RPC` | JSON array of Ethereum Mainnet RPC URLs — must be same length as `MATIC_RPC`; index `n` must be the same provider |
+| `MATIC_RPC` | JSON array of Polygon Mainnet RPC URLs — must be same length as `ETHEREUM_RPC`; index `n` must be the same provider |
+| `SEPOLIA_RPC` | JSON array of Sepolia RPC URLs — must be same length as `AMOY_RPC`; index `n` must be the same provider |
+| `AMOY_RPC` | JSON array of Polygon Amoy testnet RPC URLs — must be same length as `SEPOLIA_RPC`; index `n` must be the same provider |
 | `ZKEVM_MAINNET_URL` | zkEVM Polygon Mainnet bridge API URL |
 | `ZKEVM_TESTNET_URL` | zkEVM Cardona testnet bridge API URL |
 | `PORT` | Port to listen on (default: `5000`) |
 | `SENTRY_DSN` | Sentry DSN for error reporting (optional) |
 | `PRETTY_LOGS` | Set to `true` for human-readable log output in development (optional) |
 
-Multiple RPC URLs per network enable automatic round-robin failover on error.
+See "Why you should configure multiple RPC URLs" above for the provider-pairing constraint.
 
 ## Running
 

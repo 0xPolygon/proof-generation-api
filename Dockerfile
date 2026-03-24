@@ -9,9 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 RUN npm i -g pnpm@10.30.3
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY . .
 RUN pnpm install --frozen-lockfile --ignore-scripts
-COPY src/ ./src/
 RUN pnpm --filter proof-generation-api deploy --prod --legacy /deploy
 
 FROM node:24-bookworm-slim
