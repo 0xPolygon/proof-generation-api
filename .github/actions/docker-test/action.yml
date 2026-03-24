@@ -1,0 +1,179 @@
+name: Docker test
+description: >
+  Resolves the service from the changeset tag, builds the Docker image, starts
+  the container, runs the full test suite via TEST_BASE_URL, then stops the
+  container.
+
+inputs:
+  tag:
+    description: >
+      Full changeset tag to build (e.g. gas-station@1.2.3).
+      Omit on tag-push triggers; the action reads GITHUB_REF_NAME directly.
+    required: false
+    default: ''
+  port:
+    description: Port the container listens on during tests.
+    required: false
+    default: '3000'
+  test_vars:
+    description: >
+      Space-separated list of env var names to forward to the test container
+      (e.g. 'POS_RPC ETH_RPC RUN_TESTNET'). Each named var must already be
+      set in the calling job's env: block. The values are passed via docker's
+      -e VAR syntax, which copies from the current process environment —
+      no escaping or file-writing needed. Omit for services with no
+      runtime env var requirements.
+    required: false
+    default: ''
+
+outputs:
+  image_name:
+    description: Docker image name derived from the tag (e.g. gas-station)
+    value: ${{ steps.resolve.outputs.image_name }}
+  image_tag:
+    description: Semver version extracted from the tag (e.g. 1.2.3)
+    value: ${{ steps.resolve.outputs.image_tag }}
+  dockerfile_path:
+    description: Path to Dockerfile relative to repo root
+    value: ${{ steps.resolve.outputs.dockerfile_path }}
+  checkout_ref:
+    description: Git ref that was checked out
+    value: ${{ steps.resolve.outputs.checkout_ref }}
+  should_build:
+    description: >
+      'true' if a deployable package was found for the tag; 'false' if the tag
+      should be skipped (e.g. library package with no Dockerfile field).
+    value: ${{ steps.resolve.outputs.should_build }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      with:
+        ref: ${{ inputs.tag != '' && inputs.tag || github.ref_name }}
+
+    - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
+
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      with:
+        node-version-file: .nvmrc
+        cache: pnpm
+
+    - name: Resolve service, version and Dockerfile
+      id: resolve
+      shell: bash
+      env:
+        TAG_INPUT: ${{ inputs.tag }}
+      run: |
+        if [ -n "${TAG_INPUT}" ]; then
+          REF="${TAG_INPUT}"
+        else
+          REF="${GITHUB_REF_NAME}"
+        fi
+
+        SERVICE="${REF%@*}"
+        VERSION="${REF##*@}"
+        IMAGE_NAME="${SERVICE#@*/}"
+
+        PKG_DIR=$(pnpm --filter "${SERVICE}" exec -- node -e \
+          "process.stdout.write(process.cwd())" 2>/dev/null || echo "")
+
+        if [ -z "$PKG_DIR" ] || [ ! -f "${PKG_DIR}/package.json" ]; then
+          echo "Package ${SERVICE} not found in workspace — skipping"
+          echo "should_build=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        DOCKERFILE_REL=$(jq -r '.dockerfile // empty' "${PKG_DIR}/package.json")
+
+        if [ -z "$DOCKERFILE_REL" ]; then
+          echo "No 'dockerfile' field in ${SERVICE} package.json — skipping"
+          echo "should_build=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        PKG_DIR_REL="${PKG_DIR#${GITHUB_WORKSPACE}/}"
+        if [ -n "$PKG_DIR_REL" ]; then
+          DOCKERFILE="${PKG_DIR_REL}/${DOCKERFILE_REL}"
+        else
+          DOCKERFILE="${DOCKERFILE_REL}"
+        fi
+
+        echo "image_name=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+        echo "image_tag=${VERSION}" >> "$GITHUB_OUTPUT"
+        echo "dockerfile_path=${DOCKERFILE}" >> "$GITHUB_OUTPUT"
+        echo "checkout_ref=${REF}" >> "$GITHUB_OUTPUT"
+        echo "should_build=true" >> "$GITHUB_OUTPUT"
+
+    - name: Build Docker image
+      if: ${{ steps.resolve.outputs.should_build == 'true' }}
+      shell: bash
+      env:
+        IMAGE_NAME: ${{ steps.resolve.outputs.image_name }}
+        DOCKERFILE: ${{ steps.resolve.outputs.dockerfile_path }}
+      run: docker build -f "${DOCKERFILE}" -t "${IMAGE_NAME}:ci" .
+
+    - name: Start container
+      if: ${{ steps.resolve.outputs.should_build == 'true' }}
+      shell: bash
+      env:
+        IMAGE_NAME: ${{ steps.resolve.outputs.image_name }}
+        PORT: ${{ inputs.port }}
+        TEST_VARS: ${{ inputs.test_vars }}
+      run: |
+        # Build -e flags for each explicitly named test var. Docker copies the
+        # value from the current process environment — the calling job's env:
+        # block has already set them. This is an explicit allowlist: only the
+        # vars the trigger declares in test_vars reach the container.
+        FLAGS=""
+        for var in $TEST_VARS; do
+          FLAGS="$FLAGS -e $var"
+        done
+
+        # shellcheck disable=SC2086
+        docker run -d \
+          --name "${IMAGE_NAME}-ci" \
+          -p "${PORT}:${PORT}" \
+          -e "PORT=${PORT}" \
+          $FLAGS \
+          "${IMAGE_NAME}:ci"
+
+    - name: Install dependencies
+      if: ${{ steps.resolve.outputs.should_build == 'true' }}
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Wait for service to be ready
+      if: ${{ steps.resolve.outputs.should_build == 'true' }}
+      shell: bash
+      env:
+        IMAGE_NAME: ${{ steps.resolve.outputs.image_name }}
+        PORT: ${{ inputs.port }}
+      run: |
+        for i in $(seq 1 30); do
+          if curl -sf "http://localhost:${PORT}/health-check" > /dev/null; then
+            echo "Service ready after ${i}s"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "Service did not become ready in time"
+        docker logs "${IMAGE_NAME}-ci"
+        exit 1
+
+    - name: Run test suite against container
+      if: ${{ steps.resolve.outputs.should_build == 'true' }}
+      shell: bash
+      env:
+        IMAGE_NAME: ${{ steps.resolve.outputs.image_name }}
+        TEST_BASE_URL: http://localhost:${{ inputs.port }}
+      run: pnpm --filter "${IMAGE_NAME}" test
+
+    - name: Stop container
+      if: ${{ always() && steps.resolve.outputs.should_build == 'true' }}
+      shell: bash
+      env:
+        IMAGE_NAME: ${{ steps.resolve.outputs.image_name }}
+      run: |
+        docker logs "${IMAGE_NAME}-ci" || true
+        docker stop "${IMAGE_NAME}-ci" && docker rm "${IMAGE_NAME}-ci"
