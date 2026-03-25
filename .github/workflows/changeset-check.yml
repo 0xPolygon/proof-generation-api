@@ -1,9 +1,7 @@
 name: Changeset check
 
 on:
-  pull_request:
-    branches:
-      - master
+  workflow_call:
 
 permissions:
   contents: read
@@ -17,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0 # Required: changesets needs full history to find where HEAD diverged from origin/master
+          fetch-depth: 0 # Required: changesets needs full history to find where HEAD diverged from the base branch
 
       - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
 
@@ -30,17 +28,15 @@ jobs:
 
       - name: Check for changeset
         id: check
-        run: pnpm exec changeset status --since=origin/master
+        # github.base_ref is the branch this PR targets — works for any default branch name (main, master, etc.)
+        run: pnpm exec changeset status --since=origin/${{ github.base_ref }}
         continue-on-error: true
 
       - name: Manage changeset comment
         if: steps.check.outcome == 'success' || steps.check.outcome == 'failure'
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        uses: ./.github/actions/upsert-changeset-comment
         with:
-          script: |
-            const fn = require('./.github/scripts/upsert-changeset-comment.cjs')
-            const passed = '${{ steps.check.outcome }}' === 'success'
-            await fn({ github, context, passed })
+          passed: ${{ steps.check.outcome == 'success' }}
 
       - name: Fail if no changeset
         if: steps.check.outcome == 'failure'

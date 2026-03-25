@@ -1,13 +1,17 @@
-name: Release
+name: npm release
 
 on:
-  push:
-    branches:
-      - master
+  workflow_call:
+    secrets:
+      CHANGESET_RELEASE_BOT_APP_ID:
+        required: true
+      CHANGESET_RELEASE_BOT_APP_PRIVATE_KEY:
+        required: true
 
 permissions:
   contents: write
   pull-requests: write
+  id-token: write # required for npm OIDC trusted publishing
 
 jobs:
   release:
@@ -30,6 +34,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+          registry-url: 'https://registry.npmjs.org'
+          # No node-auth-token — npm auth handled by OIDC
 
       - run: pnpm install --frozen-lockfile
 
@@ -45,9 +51,12 @@ jobs:
           commitMode: github-api
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          # No NPM_TOKEN — using OIDC trusted publishing
+          # changesets/action v1.7.0 only writes auth token to .npmrc when NPM_TOKEN is set;
+          # leaving it unset allows npm to use OIDC automatically
 
       - name: Add description to Release / Deploy PR
-        if: steps.changesets.outputs.hasChangesets == 'true'
+        if: steps.changesets.outputs.pullRequestNumber != ''
         env:
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_NUMBER: ${{ steps.changesets.outputs.pullRequestNumber }}
@@ -60,21 +69,23 @@ jobs:
           ## What is this PR?
 
           This is the automated **Release / Deploy** PR. It is created and updated
-          automatically by the release pipeline as changesets accumulate on `master`.
-          It contains version bumps and updated changelogs.
+          automatically by the release pipeline as changesets accumulate on `main`.
+          It contains version bumps, updated changelogs, and dependency updates for
+          every changed package.
 
           ## What happens when you merge?
 
           Merging triggers the full release and deployment pipeline:
 
-          1. **Git tags** — a version tag is pushed (e.g. `proof-generation-api@2.1.0`)
-          2. **Docker build** — a new image is built tagged with the service version
-             and pushed to GCP Artifact Registry
-          3. **Kargo promotion** — new image is promoted through dev → staging → production
+          1. **npm publish** — changed packages are published to the npm registry
+          2. **Git tags** — version tags are pushed for each package (e.g. `gas-station@2.1.0`)
+          3. **Docker builds** — each deployable service gets a new image tagged with its
+             version and pushed to GCP Artifact Registry
+          4. **Kargo promotion** — new images are promoted through dev → staging → production
 
           > [!WARNING]
           > Only merge when the team is ready for a production release. This PR updates
-          > itself automatically as new changesets land on `master` — there is no need to
+          > itself automatically as new changesets land on `main` — there is no need to
           > close and reopen it.
 
           ---

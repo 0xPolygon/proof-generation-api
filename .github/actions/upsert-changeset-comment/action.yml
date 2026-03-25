@@ -1,0 +1,24 @@
+name: Upsert changeset comment
+description: Posts or removes the changeset-required nag comment on a PR
+
+inputs:
+  passed:
+    description: 'true if the changeset check passed; false if it failed'
+    required: true
+  token:
+    description: 'GitHub token with pull-requests:write permission'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Upsert comment
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+        CHANGESET_PASSED: ${{ inputs.passed }}
+        # Assign github.action_path to an env var before shell use to prevent
+        # expression injection if the path contains special characters.
+        ACTION_PATH: ${{ github.action_path }}
+      run: node "$ACTION_PATH/dist/index.js"

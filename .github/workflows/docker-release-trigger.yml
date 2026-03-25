@@ -1,0 +1,57 @@
+name: Docker release
+
+on:
+  push:
+    tags:
+      - 'proof-generation-api@[0-9]*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Changeset tag to build (e.g. proof-generation-api@1.2.3)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # RPC URLs required by the service at runtime and during tests.
+      # AMOY_RPC and the zkevm URLs are public endpoints with no secret.
+      # ETHEREUM_RPC, MATIC_RPC, and SEPOLIA_RPC use an eRPC client token.
+      AMOY_RPC: '["https://rpc-amoy.polygon.technology"]'
+      ETHEREUM_RPC: '["https://rpc.polygon.tools/internal/evm/1?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+      MATIC_RPC: '["https://rpc.polygon.tools/internal/evm/137?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+      SEPOLIA_RPC: '["https://rpc.polygon.tools/internal/evm/11155111?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
+      ZKEVM_MAINNET_URL: https://bridge-api.zkevm-rpc.com
+      ZKEVM_TESTNET_URL: https://bridge-api.cardona.zkevm-rpc.com
+    outputs:
+      image_name: ${{ steps.docker-test.outputs.image_name }}
+      image_tag: ${{ steps.docker-test.outputs.image_tag }}
+      dockerfile_path: ${{ steps.docker-test.outputs.dockerfile_path }}
+      checkout_ref: ${{ steps.docker-test.outputs.checkout_ref }}
+      should_build: ${{ steps.docker-test.outputs.should_build }}
+    steps:
+      # Checkout is required so the runner can find .github/actions/docker-test/action.yml
+      # on the filesystem. docker-test then does its own checkout at the release tag.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - id: docker-test
+        uses: ./.github/actions/docker-test
+        with:
+          tag: ${{ inputs.tag || '' }}
+          test_vars: AMOY_RPC ETHEREUM_RPC MATIC_RPC SEPOLIA_RPC ZKEVM_MAINNET_URL ZKEVM_TESTNET_URL
+
+  release:
+    needs: test
+    if: needs.test.outputs.should_build == 'true'
+    uses: ./.github/workflows/docker-release.yml
+    with:
+      image_name: ${{ needs.test.outputs.image_name }}
+      image_tag: ${{ needs.test.outputs.image_tag }}
+      dockerfile_path: ${{ needs.test.outputs.dockerfile_path }}
+      checkout_ref: ${{ needs.test.outputs.checkout_ref }}
+    secrets:
+      build_params_gh_secret_keys: ${{ secrets.build_params_gh_secret_keys }}

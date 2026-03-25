@@ -1,8 +1,10 @@
 name: Claude Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
+  workflow_call:
+    secrets:
+      CLAUDE_API_KEY:
+        required: true
 
 permissions: {}
 
@@ -10,7 +12,11 @@ jobs:
   claude-review:
     # Only run on PRs from the same repository (not forks) to avoid API costs on external contributions.
     # Skip changeset-release branches — those are automated version-bump PRs, not code to review.
-    if: github.event.pull_request.head.repo.full_name == github.repository && !startsWith(github.head_ref, 'changeset-release/')
+    # Skip PRs labelled disable-claude-code-review.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !startsWith(github.head_ref, 'changeset-release/') &&
+      !contains(github.event.pull_request.labels.*.name, 'disable-claude-code-review')
     runs-on: ubuntu-latest
     permissions:
       contents: read
