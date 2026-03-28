@@ -132,7 +132,6 @@ export async function isBlockIncluded(blockNumber: string, isMainnet: boolean, v
         errorCode: error?.code,
         errorMessage: error?.message
       });
-      await new Promise((r) => setTimeout(r, 1000));
     }
   }
   return result;
@@ -193,7 +192,6 @@ export async function fastMerkleProof(
         errorCode: error?.code,
         errorMessage: error?.message
       });
-      await new Promise((r) => setTimeout(r, 1000));
     }
   }
   return { proof };
@@ -323,7 +321,6 @@ export async function generateExitPayload(
         errorCode: error?.code,
         errorMessage: error?.message
       });
-      await new Promise((r) => setTimeout(r, 1000));
     }
   }
   return { message: 'Payload generation success', result };
@@ -443,7 +440,6 @@ export async function generateAllExitPayloads(
         errorCode: error?.code,
         errorMessage: error?.message
       });
-      await new Promise((r) => setTimeout(r, 1000));
     }
   }
   return { message: 'Payload generation success', result };
