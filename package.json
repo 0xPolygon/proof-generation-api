@@ -19,7 +19,7 @@
     "prepare": "husky",
     "get-receipts-root": "dotenvx run -- node src/scripts/get-receipts-root.ts",
     "memory-report": "dotenvx run -- node --expose-gc --inspect src/scripts/memory-report.ts",
-    "memory-compare": "node src/scripts/memory-compare.ts",
+    "memory-compare": "node ../apps-team-ops/src/bin/memory-compare.ts",
     "ci:publish": "pnpm exec changeset publish"
   },
   "engines": {
