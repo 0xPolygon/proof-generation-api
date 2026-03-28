@@ -1,6 +1,10 @@
 // Must be first: initializes Sentry before any other module loads.
 
 import '../instrument.ts';
-import { startApiServer } from '../index.ts';
+import { getEnv } from '../env.ts';
+import { getExpressApp, startApiServer } from '../index.ts';
+import { createLogger } from '../logger.ts';
 
-void startApiServer();
+const logger = await createLogger();
+
+void startApiServer({ port: getEnv().PORT, app: getExpressApp(logger), logger });

@@ -5,7 +5,7 @@ import type { IPOSClientConfig } from '@maticnetwork/maticjs';
 import maticJs from '@maticnetwork/maticjs';
 import maticJs_Ethers from '@maticnetwork/maticjs-ethers';
 
-import { config } from '../config.ts';
+import { config } from './config.ts';
 
 const { Converter, POSClient, use } = maticJs; // default export :(
 

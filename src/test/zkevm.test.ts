@@ -31,7 +31,7 @@ describe('zkEVM endpoints', { timeout: 30_000 }, () => {
     expect(res).property('status', 400);
     expect(res).nested.property('body.error', true);
     expect(res).nested.property(
-      'body.msg',
+      'body.message',
       'Invalid network polygon. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes'
     );
   });
@@ -42,7 +42,7 @@ describe('zkEVM endpoints', { timeout: 30_000 }, () => {
     expect(res).property('status', 400);
     expect(res).nested.property('body.error', true);
     expect(res).nested.property(
-      'body.msg',
+      'body.message',
       'Invalid network polygon. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes'
     );
   });
@@ -52,7 +52,7 @@ describe('zkEVM endpoints', { timeout: 30_000 }, () => {
 
     expect(res).property('status', 400);
     expect(res).nested.property('body.error', true);
-    expect(res).nested.property('body.msg', 'Invalid network ID or deposit count!');
+    expect(res).nested.property('body.message', 'Invalid network ID or deposit count!');
   });
 
   it('should 400 with correct message for float deposit_cnt', async () => {
@@ -60,7 +60,7 @@ describe('zkEVM endpoints', { timeout: 30_000 }, () => {
 
     expect(res).property('status', 400);
     expect(res).nested.property('body.error', true);
-    expect(res).nested.property('body.msg', 'Invalid network ID or deposit count!');
+    expect(res).nested.property('body.message', 'Invalid network ID or deposit count!');
   });
 
   it('should 400 with correct message for non-integer net_id', async () => {
@@ -68,6 +68,6 @@ describe('zkEVM endpoints', { timeout: 30_000 }, () => {
 
     expect(res).property('status', 400);
     expect(res).nested.property('body.error', true);
-    expect(res).nested.property('body.msg', 'Invalid network ID or deposit count!');
+    expect(res).nested.property('body.message', 'Invalid network ID or deposit count!');
   });
 });

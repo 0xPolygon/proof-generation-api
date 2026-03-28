@@ -59,15 +59,19 @@ docker stop proof-gen-test
 
 **Route mounting:** See `src/routes/index.ts` for the router tree. Each route file in `src/routes/` owns its own path segment.
 
-**Validation:** Zod v4 schemas in `src/schemas.ts` serve dual duty — runtime validation via `safeParse()` and OpenAPI spec generation via `@asteasolutions/zod-to-openapi`. Each route validates with `Schema.safeParse({ params: req.params, query: req.query })` and on failure passes `result.error.issues[0]?.message` to `handleBadRequest()`.
+**Validation:** Zod v4 schemas in `src/schemas.ts` serve dual duty — runtime validation via `safeParse()` and OpenAPI spec generation via `@asteasolutions/zod-to-openapi`. Each route validates with `Schema.safeParse({ params: req.params, query: req.query })` and on failure throws `new BadRequest(result.error.issues[0]?.message)`.
 
 **Service layer** (`src/services/`): Business logic for proof generation. Uses `@maticnetwork/maticjs` + ethers v5. RPC calls use round-robin failover across configured endpoints (max retries = 2× endpoint count) with no delay between retries — the retry immediately advances to the next provider pair, so a sleep would only penalise healthy providers unnecessarily. The retry logic indexes both arrays in a coupled pair (e.g. `MATIC_RPC` + `ETHEREUM_RPC`) by the same index, so index `n` in each array must be endpoints from the same provider — switching providers on a retry means incrementing the index in both arrays simultaneously. The two coupled pairs are `MATIC_RPC`/`ETHEREUM_RPC` (mainnet) and `AMOY_RPC`/`SEPOLIA_RPC` (testnet); each pair must have the same number of entries.
 
-**Provider singleton** (`src/helpers/maticClient.ts`): `POSClient` instances are cached for the lifetime of the process, keyed by (network, version, maticRPC, ethereumRPC). `StaticJsonRpcProvider` is used rather than `JsonRpcProvider` — this service makes one-off RPC calls and never subscribes to events, so the background block-polling that `JsonRpcProvider` performs is unnecessary and accumulates memory over time.
+**Provider singleton** (`src/maticClient.ts`): `POSClient` instances are cached for the lifetime of the process, keyed by (network, version, maticRPC, ethereumRPC). `StaticJsonRpcProvider` is used rather than `JsonRpcProvider` — this service makes one-off RPC calls and never subscribes to events, so the background block-polling that `JsonRpcProvider` performs is unnecessary and accumulates memory over time.
+
+**Logging** (`src/logger.ts`): Pino-based via `@polygonlabs/logger`. `createLogger()` is an async factory — it calls `getEnv()` lazily (only when invoked, never at module scope). The only caller is `src/bin/apiServer.ts`, which awaits it at startup via top-level await and passes the resulting `Logger` down through `getExpressApp(logger)` → `createIndexRouter(logger)` → `createV1Router(logger)` / `createZkEVMRouter(logger)` → service functions as explicit parameters. No module-level logger singletons anywhere. `src/test/helpers/agent.ts` uses a top-level `await createLogger()` guarded by `testEnv.TEST_BASE_URL` so env validation is skipped when tests target a remote server.
+
+**Error handling** (`src/errors.ts`): Domain errors extend `HTTPError` from `@polygonlabs/verror` with explicit `statusCode` values — `BlockNotIncludedError`, `IncorrectTxError`, `TxNotCheckpointedError`, `ZKEVMServiceError` (all 404). Routes throw these directly; a central Express error handler in `src/index.ts` maps `err.statusCode` to the response and logs 4xx at `debug` level, 5xx at `error` level. Services use `instanceof HTTPError` in retry loops — any HTTP-level error stops retrying immediately; plain `Error`s (transient RPC failures) are retried.
 
 **Environment:** `src/env.ts` validates env vars with `@t3-oss/env-core` + Zod. See `.env.example` for the required variables.
 
-**Response format inconsistency:** 400 responses use `{ error: true, msg }` while 404/500 use `{ error: true, message }`. This matches production behavior — see `src/helpers/responseHandlers.ts`.
+**Response format:** All error responses use `{ error: true, message }` uniformly. Success responses return the payload directly.
 
 ## Conventions
 
@@ -83,7 +87,7 @@ docker stop proof-gen-test
 
 Tests make live RPC calls (no mocks). The `getAgent()` helper in `src/test/helpers/agent.ts` returns a Supertest agent targeting either the local Express app or a remote URL via `TEST_BASE_URL`. Remote targets require a `User-Agent` header (Cloudflare blocks bare requests).
 
-Error tests assert `body.error` and exact `body.msg` strings to ensure parity with production.
+Error tests assert `body.error` and exact `body.message` strings to ensure parity with production.
 
 ## Zod v4 Gotchas
 

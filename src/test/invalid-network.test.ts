@@ -14,7 +14,7 @@ describe('invalid network param tests', () => {
     expect(res)
       .property('body')
       .property(
-        'msg',
+        'message',
         'Invalid network mainnet. Network can either be matic or amoy for PoS v1 routes'
       );
   });
@@ -29,7 +29,7 @@ describe('invalid network param tests', () => {
     expect(res)
       .property('body')
       .property(
-        'msg',
+        'message',
         'Invalid network testnet. Network can either be matic or amoy for PoS v1 routes'
       );
   });
@@ -44,7 +44,7 @@ describe('invalid network param tests', () => {
     expect(res)
       .property('body')
       .property(
-        'msg',
+        'message',
         'Invalid network mum. Network can either be matic or amoy for PoS v1 routes'
       );
   });
@@ -59,7 +59,7 @@ describe('invalid network param tests', () => {
     expect(res)
       .property('body')
       .property(
-        'msg',
+        'message',
         'Invalid network mainnet. Network can either be matic or amoy for PoS v1 routes'
       );
   });
@@ -72,7 +72,7 @@ describe('invalid network param tests', () => {
     expect(res)
       .property('body')
       .property(
-        'msg',
+        'message',
         'Invalid network polygon. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes'
       );
   });
@@ -85,7 +85,7 @@ describe('invalid network param tests', () => {
     expect(res)
       .property('body')
       .property(
-        'msg',
+        'message',
         'Invalid network polygon. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes'
       );
   });

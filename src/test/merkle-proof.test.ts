@@ -24,7 +24,7 @@ describe('merkle proof generation', { timeout: 30_000 }, () => {
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
-    expect(res).property('body').property('msg', 'Invalid start, end or block number!');
+    expect(res).property('body').property('message', 'Invalid start, end or block number!');
   });
 
   it('should 400 with correct message for a non-numeric start block number', async () => {
@@ -34,7 +34,7 @@ describe('merkle proof generation', { timeout: 30_000 }, () => {
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
-    expect(res).property('body').property('msg', 'Invalid start, end or block number!');
+    expect(res).property('body').property('message', 'Invalid start, end or block number!');
   });
 
   it('should 400 with correct message when number > end', async () => {
@@ -44,7 +44,7 @@ describe('merkle proof generation', { timeout: 30_000 }, () => {
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
-    expect(res).property('body').property('msg', 'Invalid start or end or block numbers!');
+    expect(res).property('body').property('message', 'Invalid start or end or block numbers!');
   });
 
   it('should 400 with correct message when end < start', async () => {
@@ -54,7 +54,7 @@ describe('merkle proof generation', { timeout: 30_000 }, () => {
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
-    expect(res).property('body').property('msg', 'Invalid start or end or block numbers!');
+    expect(res).property('body').property('message', 'Invalid start or end or block numbers!');
   });
 
   it('should 400 with correct message when number < start', async () => {
@@ -64,6 +64,6 @@ describe('merkle proof generation', { timeout: 30_000 }, () => {
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
-    expect(res).property('body').property('msg', 'Invalid start or end or block numbers!');
+    expect(res).property('body').property('message', 'Invalid start or end or block numbers!');
   });
 });
