@@ -1,8 +1,6 @@
-import type { Logger } from 'pino';
-
 import * as Sentry from '@sentry/node';
 
-import type { SentryAdapter } from '@polygonlabs/logger';
+import type { Logger, SentryAdapter } from '@polygonlabs/logger';
 
 import { createLogger as createPinoLogger } from '@polygonlabs/logger';
 

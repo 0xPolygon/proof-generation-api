@@ -18,8 +18,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0(@maticnetwork/maticjs@3.9.7)
       '@polygonlabs/logger':
-        specifier: ^1.0.0
-        version: 1.0.0(@sentry/node@10.41.0)(pino-pretty@13.1.3)
+        specifier: ^1.0.1
+        version: 1.0.1(@sentry/node@10.41.0)(pino-pretty@13.1.3)
       '@polygonlabs/verror':
         specifier: ^1.0.0
         version: 1.0.0
@@ -896,8 +896,8 @@ packages:
       typescript:
         optional: true
 
-  '@polygonlabs/logger@1.0.0':
-    resolution: {integrity: sha512-nn2148UpJqzMGMLsNZLoM0KN+YUNDYlpmlcv1wL1FU0plCtgkBTENo15u2+5VIXDpfzw7oXr0ToTnGgCiwFniQ==}
+  '@polygonlabs/logger@1.0.1':
+    resolution: {integrity: sha512-7r6JrlWn2mRiGqW2p0ubjKqFqYR48GDuCghckkZ38ntcsmIHUaAi4uH8hqTFL/lDdB3YuSdUgI59gZxGK7OZAg==}
     peerDependencies:
       '@sentry/node': '>=8.0.0'
       pino-pretty: '>=13.0.0'
@@ -909,6 +909,9 @@ packages:
 
   '@polygonlabs/verror@1.0.0':
     resolution: {integrity: sha512-oRyhA0oyZv+4yJbOZOhFwHCE6BkRURjGGZU0tvq+qpzSqHOeCEc9oUAyTC5KKQ0yMoZzyg/4dJn5ENfUJJefYw==}
+
+  '@polygonlabs/verror@1.0.1':
+    resolution: {integrity: sha512-YJ6O6XOd+9VispTHIjrUSc57GKdroK/JvkkcyQ3rJQrchQetJ1JYFxUHgwg+kSYqWWSw1fSj78HfvPq7T0SoQQ==}
 
   '@prisma/instrumentation@7.2.0':
     resolution: {integrity: sha512-Rh9Z4x5kEj1OdARd7U18AtVrnL6rmLSI0qYShaB4W7Wx5BKbgzndWF+QnuzMb7GLfVdlT5aYCXoPQVYuYtVu0g==}
@@ -4673,15 +4676,17 @@ snapshots:
       - eslint-plugin-import
       - supports-color
 
-  '@polygonlabs/logger@1.0.0(@sentry/node@10.41.0)(pino-pretty@13.1.3)':
+  '@polygonlabs/logger@1.0.1(@sentry/node@10.41.0)(pino-pretty@13.1.3)':
     dependencies:
-      '@polygonlabs/verror': 1.0.0
+      '@polygonlabs/verror': 1.0.1
       pino: 10.3.1
     optionalDependencies:
       '@sentry/node': 10.41.0
       pino-pretty: 13.1.3
 
   '@polygonlabs/verror@1.0.0': {}
+
+  '@polygonlabs/verror@1.0.1': {}
 
   '@prisma/instrumentation@7.2.0(@opentelemetry/api@1.9.0)':
     dependencies:
