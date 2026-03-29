@@ -58,7 +58,7 @@
     "@asteasolutions/zod-to-openapi": "^8.4.1",
     "@maticnetwork/maticjs": "3.9.7",
     "@maticnetwork/maticjs-ethers": "^1.1.0",
-    "@polygonlabs/logger": "^1.0.0",
+    "@polygonlabs/logger": "^1.0.1",
     "@polygonlabs/verror": "^1.0.0",
     "@scalar/express-api-reference": "^0.8.45",
     "@sentry/node": "^10.39.0",
@@ -66,7 +66,6 @@
     "cors": "^2.8.5",
     "ethers": "5.5.1",
     "express": "^5.2.1",
-    "pino": "^10.0.0",
     "zod": "^4.3.6"
   }
 }
