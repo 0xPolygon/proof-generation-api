@@ -1,15 +1,10 @@
-import { config } from '../config.ts';
-import { errorTypes } from '../constants.ts';
-import { InfoError } from '../helpers/errorHelper.ts';
-import { initMatic, convert } from '../helpers/maticClient.ts';
-import { getLogger } from '../logger.ts';
+import { HTTPError } from '@polygonlabs/verror';
 
-// Lazy singleton — initialised on first use so that importing this module does
-// not trigger env validation when running tests against TEST_BASE_URL.
-let _logger: ReturnType<typeof getLogger> | undefined;
-const logger = new Proxy({} as ReturnType<typeof getLogger>, {
-  get: (_, key) => Reflect.get((_logger ??= getLogger()), key as PropertyKey)
-});
+import type { Logger } from '../logger.ts';
+
+import { config } from '../config.ts';
+import { BlockNotIncludedError, IncorrectTxError, TxNotCheckpointedError } from '../errors.ts';
+import { convert, initMatic } from '../maticClient.ts';
 
 // Returns only the protocol+host of an RPC URL so that secret tokens in query
 // params are never written to logs.
@@ -54,21 +49,17 @@ const getVersionDetails = (version: string) => {
   }
 };
 
-/**
- * isBlockIncluded
- *
- * @param {String} blockNumber
- * @param {Boolean} isMainnet
- * @param {String} version
- * @returns {Object}
- */
-export async function isBlockIncluded(blockNumber: string, isMainnet: boolean, version: string) {
+export async function isBlockIncluded(
+  blockNumber: string,
+  isMainnet: boolean,
+  version: string,
+  logger: Logger
+) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
   let result;
 
-  // loop over rpcs to retry in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
     const maticRPCUrl = maticRPC[rpcIndex];
@@ -79,17 +70,14 @@ export async function isBlockIncluded(blockNumber: string, isMainnet: boolean, v
     }
 
     try {
-      // initialize matic client
       const rootChain = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl).then(
         (maticClient: any) => {
           return maticClient.exitUtil.rootChain;
         }
       );
 
-      // check last child block included
       const lastChildBlock = await rootChain.getLastChildBlock();
       if (parseInt(lastChildBlock) >= parseInt(blockNumber)) {
-        // fetch header block information
         const headerBlockNumber = await rootChain
           .findRootBlockFromChild(blockNumber)
           .then((res: any) => {
@@ -113,54 +101,48 @@ export async function isBlockIncluded(blockNumber: string, isMainnet: boolean, v
           message: 'success'
         };
       } else {
-        throw new InfoError(errorTypes.BlockNotIncluded, 'No block found');
+        throw new BlockNotIncludedError('No block found');
       }
 
       break;
-    } catch (error: any) {
-      if (error.type === errorTypes.BlockNotIncluded || i === maxRetries - 1) {
+    } catch (error: unknown) {
+      if (error instanceof BlockNotIncludedError || i === maxRetries - 1) {
         throw error;
       }
-      logger.warn({
-        location: 'v1ProofGenerationServices.isBlockIncluded',
-        message: 'RPC attempt failed, retrying',
-        maticRpcOrigin: rpcOrigin(maticRPCUrl),
-        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
-        attempt: i + 1,
-        maxRetries,
-        errorEvent: error?.event,
-        errorCode: error?.code,
-        errorMessage: error?.message
-      });
-      await new Promise((r) => setTimeout(r, 1000));
+      const err = error instanceof Error ? error : new Error(String(error));
+      const maticjsErr = error as Record<string, unknown>;
+      logger.warn(
+        {
+          err,
+          blockNumber,
+          network: version,
+          maticRpcOrigin: rpcOrigin(maticRPCUrl),
+          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+          attempt: i + 1,
+          maxRetries,
+          errorEvent: maticjsErr['event'],
+          errorCode: maticjsErr['code']
+        },
+        'RPC attempt failed, retrying'
+      );
     }
   }
   return result;
 }
 
-/**
- * fastMerkleProof
- *
- * @param {String} start
- * @param {String} end
- * @param {String} number
- * @param {Boolean} isMainnet
- * @param {String} version
- * @returns {Object}
- */
 export async function fastMerkleProof(
   start: string,
   end: string,
   number: number,
   isMainnet: boolean,
-  version: string
+  version: string,
+  logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
   let proof;
 
-  // loop over rpcs to retry in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
     const maticRPCUrl = maticRPC[rpcIndex];
@@ -171,49 +153,41 @@ export async function fastMerkleProof(
     }
 
     try {
-      // initialize matic client
       const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
-
-      // get merkle proof
       proof = await maticClient.exitUtil.getBlockProof(number, { start, end });
-
       break;
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (i === maxRetries - 1) {
         throw error;
       }
-      logger.warn({
-        location: 'v1ProofGenerationServices.fastMerkleProof',
-        message: 'RPC attempt failed, retrying',
-        maticRpcOrigin: rpcOrigin(maticRPCUrl),
-        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
-        attempt: i + 1,
-        maxRetries,
-        errorEvent: error?.event,
-        errorCode: error?.code,
-        errorMessage: error?.message
-      });
-      await new Promise((r) => setTimeout(r, 1000));
+      const err = error instanceof Error ? error : new Error(String(error));
+      const maticjsErr = error as Record<string, unknown>;
+      logger.warn(
+        {
+          err,
+          blockNumber: number,
+          network: version,
+          maticRpcOrigin: rpcOrigin(maticRPCUrl),
+          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+          attempt: i + 1,
+          maxRetries,
+          errorEvent: maticjsErr['event'],
+          errorCode: maticjsErr['code']
+        },
+        'RPC attempt failed, retrying'
+      );
     }
   }
   return { proof };
 }
 
-/**
- * generateExitPayload
- *
- * @param {String} blockNumber
- * @param {String} eventSignature
- * @param {Boolean} isMainnet
- * @param {String} version
- * @returns {Object}
- */
 export async function generateExitPayload(
   burnTxHash: string,
   eventSignature: string,
   tokenIndex: number,
   isMainnet: boolean,
-  version: string
+  version: string,
+  logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
@@ -221,12 +195,6 @@ export async function generateExitPayload(
   let result;
   let isCheckpointed;
 
-  logger.info({
-    location: 'v1ProofGenerationServices.generateExitPayload',
-    data: `max retries ${maxRetries}`
-  });
-
-  // loop over rpcs to retry in case of an in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
     const maticRPCUrl = maticRPC[rpcIndex];
@@ -236,48 +204,26 @@ export async function generateExitPayload(
       continue;
     }
 
-    logger.info({
-      location: 'v1ProofGenerationServices.generateExitPayload',
-      data: `rpcIndex ${rpcIndex}`
-    });
     try {
-      // initialize matic client
       const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
 
-      // check for checkpoint
       if (!isCheckpointed) {
         try {
-          logger.info({
-            location: 'v1ProofGenerationServices.generateExitPayload',
-            call: 'Checking for checkpoint status',
-            burnTxHash
-          });
           isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
-        } catch (error) {
-          logger.info({
-            location: 'v1ProofGenerationServices.generateExitPayload',
-            call: 'Checking for checkpoint status failed',
-            error
-          });
+        } catch (checkpointError: unknown) {
+          const err =
+            checkpointError instanceof Error ? checkpointError : new Error(String(checkpointError));
+          logger.warn({ err, burnTxHash, network: version }, 'checkpoint status check failed');
           if (i === maxRetries - 1) {
-            throw new InfoError(errorTypes.IncorrectTx, 'Incorrect burn transaction');
+            throw new IncorrectTxError('Incorrect burn transaction');
           }
-          throw new Error('Null receipt received');
+          throw err;
         }
         if (!isCheckpointed) {
-          throw new InfoError(
-            errorTypes.TxNotCheckpointed,
-            'Burn transaction has not been checkpointed yet'
-          );
+          throw new TxNotCheckpointedError('Burn transaction has not been checkpointed yet');
         }
       }
-      logger.info({
-        location: 'v1ProofGenerationServices.generateExitPayload',
-        call: 'checkpoint status',
-        isCheckpointed
-      });
 
-      // build payload for exit
       try {
         result = await maticClient.exitUtil.buildPayloadForExit(
           burnTxHash,
@@ -285,64 +231,59 @@ export async function generateExitPayload(
           false,
           tokenIndex
         );
-      } catch (error: any) {
-        if (error.message === 'Index is greater than the number of tokens in this transaction') {
-          throw new InfoError(errorTypes.BlockNotIncluded, error.message);
+      } catch (buildError: unknown) {
+        const err = buildError instanceof Error ? buildError : new Error(String(buildError));
+        if (err.message === 'Index is greater than the number of tokens in this transaction') {
+          // skipCauseMessage (WError semantics): the outer message stays clean for
+          // the HTTP response; the original maticjs error is preserved in the cause
+          // chain for the logger to unwrap.
+          throw new BlockNotIncludedError('Token index out of range for this transaction', {
+            cause: err,
+            skipCauseMessage: true
+          });
         }
         if (i === maxRetries - 1) {
-          throw new InfoError(
-            errorTypes.BlockNotIncluded,
-            'Event Signature log not found in tx receipt'
-          );
+          throw new BlockNotIncludedError('Event Signature log not found in tx receipt');
         }
-        throw new Error('Null receipt received');
+        throw err;
       }
 
       if (!result) {
-        throw new Error('Null result received');
+        throw new Error('buildPayloadForExit returned no result');
       }
 
       break;
-    } catch (error: any) {
-      if (
-        error.type === errorTypes.TxNotCheckpointed ||
-        error.type === errorTypes.IncorrectTx ||
-        error.type === errorTypes.BlockNotIncluded ||
-        i === maxRetries - 1
-      ) {
+    } catch (error: unknown) {
+      if (error instanceof HTTPError || i === maxRetries - 1) {
         throw error;
       }
-      logger.warn({
-        location: 'v1ProofGenerationServices.generateExitPayload',
-        message: 'RPC attempt failed, retrying',
-        maticRpcOrigin: rpcOrigin(maticRPCUrl),
-        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
-        attempt: i + 1,
-        maxRetries,
-        errorEvent: error?.event,
-        errorCode: error?.code,
-        errorMessage: error?.message
-      });
-      await new Promise((r) => setTimeout(r, 1000));
+      const err = error instanceof Error ? error : new Error(String(error));
+      const maticjsErr = error as Record<string, unknown>;
+      logger.warn(
+        {
+          err,
+          burnTxHash,
+          network: version,
+          maticRpcOrigin: rpcOrigin(maticRPCUrl),
+          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+          attempt: i + 1,
+          maxRetries,
+          errorEvent: maticjsErr['event'],
+          errorCode: maticjsErr['code']
+        },
+        'RPC attempt failed, retrying'
+      );
     }
   }
   return { message: 'Payload generation success', result };
 }
 
-/**
- * generateAllExitPayloads
- *
- * @param {String} blockNumber
- * @param {String} eventSignature
- * @param {Boolean} isMainnet
- * @param {String} version
- * @returns {Object}
- */
 export async function generateAllExitPayloads(
   burnTxHash: string,
   eventSignature: string,
   isMainnet: boolean,
-  version: string
+  version: string,
+  logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
@@ -350,9 +291,6 @@ export async function generateAllExitPayloads(
   let result;
   let isCheckpointed;
 
-  logger.info(`max retries ${maxRetries}, ${ethereumRPC}`);
-
-  // loop over rpcs to retry in case of an in case of an rpc error
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
     const maticRPCUrl = maticRPC[rpcIndex];
@@ -363,87 +301,63 @@ export async function generateAllExitPayloads(
     }
 
     try {
-      // initialize matic client
       const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
 
-      // check for checkpoint
       try {
-        const safeBurnTxHash = burnTxHash.replace(/[\r\n]/g, '');
-        logger.info(`Checking for checkpoint status ${safeBurnTxHash}`);
         isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
-        logger.info({ isCheckpointed: isCheckpointed });
-      } catch {
+      } catch (checkpointError: unknown) {
         if (i === maxRetries - 1) {
-          throw new InfoError(errorTypes.IncorrectTx, 'Incorrect burn transaction');
+          throw new IncorrectTxError('Incorrect burn transaction');
         }
-        throw new Error('Null receipt received');
+        throw checkpointError instanceof Error
+          ? checkpointError
+          : new Error(String(checkpointError));
       }
       if (!isCheckpointed) {
-        throw new InfoError(
-          errorTypes.TxNotCheckpointed,
-          'Burn transaction has not been checkpointed yet'
-        );
+        throw new TxNotCheckpointedError('Burn transaction has not been checkpointed yet');
       }
 
-      // build payload for exit
       try {
         result = await maticClient.exitUtil.buildMultiplePayloadsForExit(
           burnTxHash,
           eventSignature,
           false
         );
-      } catch (buildError: any) {
-        logger.warn({
-          location: 'v1ProofGenerationServices.generateAllExitPayloads',
-          message: 'buildMultiplePayloadsForExit failed',
-          attempt: i + 1,
-          maticRpcOrigin: rpcOrigin(maticRPCUrl),
-          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
-          buildErrorMessage: buildError?.message,
-          buildErrorName: buildError?.name
-        });
+      } catch (buildError: unknown) {
+        const err = buildError instanceof Error ? buildError : new Error(String(buildError));
         if (i === maxRetries - 1) {
-          throw new InfoError(
-            errorTypes.BlockNotIncluded,
-            'Event Signature log not found in tx receipt'
-          );
+          throw new BlockNotIncludedError('Event Signature log not found in tx receipt');
         }
-        throw new Error('Null receipt received');
+        // Rethrow to the outer retry loop, which logs and retries — no need to
+        // log here too.
+        throw err;
       }
 
       if (!result) {
-        throw new Error('Null result received');
+        throw new Error('buildMultiplePayloadsForExit returned no result');
       }
 
       break;
-    } catch (error: any) {
-      if (
-        error.type === errorTypes.TxNotCheckpointed ||
-        error.type === errorTypes.IncorrectTx ||
-        error.type === errorTypes.BlockNotIncluded ||
-        i === maxRetries - 1
-      ) {
-        logger.error({
-          location: 'v1ProofGenerationServices.generateAllExitPayloads',
-          message: 'All RPC retries exhausted or non-retryable error',
-          errorEvent: error?.event,
-          errorCode: error?.code,
-          errorMessage: error?.message
-        });
+    } catch (error: unknown) {
+      if (error instanceof HTTPError || i === maxRetries - 1) {
         throw error;
       }
-      logger.warn({
-        location: 'v1ProofGenerationServices.generateAllExitPayloads',
-        message: 'RPC attempt failed, retrying',
-        maticRpcOrigin: rpcOrigin(maticRPCUrl),
-        ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
-        attempt: i + 1,
-        maxRetries,
-        errorEvent: error?.event,
-        errorCode: error?.code,
-        errorMessage: error?.message
-      });
-      await new Promise((r) => setTimeout(r, 1000));
+      const err = error instanceof Error ? error : new Error(String(error));
+      const maticjsErr = error as Record<string, unknown>;
+      logger.warn(
+        {
+          err,
+          burnTxHash,
+          network: version,
+          maticRpcOrigin: rpcOrigin(maticRPCUrl),
+          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+          attempt: i + 1,
+          maxRetries,
+          errorEvent: maticjsErr['event'],
+          errorCode: maticjsErr['code']
+        },
+        'RPC attempt failed, retrying'
+      );
     }
   }
   return { message: 'Payload generation success', result };

@@ -1,10 +1,9 @@
-import type { Response, Request } from 'express';
+import type { Request, Response } from 'express';
 
 import { Router } from 'express';
 
-import { InfoError } from '../helpers/errorHelper.ts';
-import { handleBadRequest, handleError, handleResponse } from '../helpers/responseHandlers.ts';
-import { getLogger } from '../logger.ts';
+import { BadRequest, GeneralError } from '@polygonlabs/verror';
+
 import {
   AllExitPayloadsSchema,
   BlockIncludedSchema,
@@ -12,17 +11,11 @@ import {
   FastMerkleProofSchema
 } from '../schemas.ts';
 import {
-  isBlockIncluded,
   fastMerkleProof,
+  generateAllExitPayloads,
   generateExitPayload,
-  generateAllExitPayloads
+  isBlockIncluded
 } from '../services/v1ProofGenerationServices.ts';
-
-let _logger: ReturnType<typeof getLogger> | undefined;
-const logger = new Proxy({} as ReturnType<typeof getLogger>, {
-  get: (_, key) => Reflect.get((_logger ??= getLogger()), key as PropertyKey)
-});
-const router = Router();
 
 const networkDetails = {
   matic: { version: 'v1' as const, isMainnet: true },
@@ -54,49 +47,34 @@ function verifyMerkleProof(number: string, start: string, proof: string) {
   return index < 2 ** proofHeight;
 }
 
-router.get('/:network/block-included/:blockNumber', async (req: Request, res: Response) => {
-  try {
+export function createV1Router(): Router {
+  const router = Router();
+
+  router.get('/:network/block-included/:blockNumber', async (req: Request, res: Response) => {
     const result = BlockIncludedSchema.safeParse({ params: req.params, query: req.query });
     if (!result.success) {
-      logger.debug({ message: result.error.issues[0]?.message, params: req.params });
-      return handleBadRequest({
-        res,
-        errMsg: result.error.issues[0]?.message ?? 'Invalid request'
-      });
+      req.log.debug({ params: req.params }, result.error.issues[0]?.message ?? 'validation failed');
+      throw new BadRequest(result.error.issues[0]?.message ?? 'Invalid request');
     }
 
     const { network, blockNumber } = result.data.params;
     const { version, isMainnet } = networkDetails[network];
 
-    const responseObj = await isBlockIncluded(blockNumber, isMainnet, version);
-    return handleResponse({ res, data: responseObj });
-  } catch (error) {
-    if (error instanceof InfoError) {
-      return handleError({ res, statusCode: 404, err: error });
-    }
-    logger.error({ message: 'error in isBlockIncluded route', error });
-    return handleError({ res });
-  }
-});
+    const responseObj = await isBlockIncluded(blockNumber, isMainnet, version, req.log);
+    res.json(responseObj);
+  });
 
-router.get('/:network/fast-merkle-proof', async (req: Request, res: Response) => {
-  try {
+  router.get('/:network/fast-merkle-proof', async (req: Request, res: Response) => {
     const result = FastMerkleProofSchema.safeParse({ params: req.params, query: req.query });
     if (!result.success) {
-      return handleBadRequest({
-        res,
-        errMsg: result.error.issues[0]?.message ?? 'Invalid request'
-      });
+      throw new BadRequest(result.error.issues[0]?.message ?? 'Invalid request');
     }
 
     const { network } = result.data.params;
     const { start, end, number } = result.data.query;
 
     if (end < start || number > end || number < start) {
-      return handleBadRequest({
-        res,
-        errMsg: 'Invalid start or end or block numbers!'
-      });
+      throw new BadRequest('Invalid start or end or block numbers!');
     }
 
     const { version, isMainnet } = networkDetails[network];
@@ -106,36 +84,24 @@ router.get('/:network/fast-merkle-proof', async (req: Request, res: Response) =>
       String(end),
       number,
       isMainnet,
-      version
+      version,
+      req.log
     );
 
     if (
-      !responseObj ||
-      !responseObj.proof ||
+      !responseObj?.proof ||
       !verifyMerkleProof(String(number), String(start), responseObj.proof)
     ) {
-      handleError({ res, errMsg: 'Invalid merkle proof created' });
-      return;
+      throw new GeneralError('Invalid merkle proof created');
     }
 
-    return handleResponse({ res, data: responseObj });
-  } catch (error) {
-    if (error instanceof InfoError) {
-      return handleError({ res, statusCode: 404, err: error });
-    }
-    logger.error({ message: 'error in fastMerkleProof route', error });
-    return handleError({ res });
-  }
-});
+    res.json(responseObj);
+  });
 
-router.get('/:network/exit-payload/:burnTxHash', async (req: Request, res: Response) => {
-  try {
+  router.get('/:network/exit-payload/:burnTxHash', async (req: Request, res: Response) => {
     const result = ExitPayloadSchema.safeParse({ params: req.params, query: req.query });
     if (!result.success) {
-      return handleBadRequest({
-        res,
-        errMsg: result.error.issues[0]?.message ?? 'Invalid request'
-      });
+      throw new BadRequest(result.error.issues[0]?.message ?? 'Invalid request');
     }
 
     const { network, burnTxHash } = result.data.params;
@@ -147,27 +113,16 @@ router.get('/:network/exit-payload/:burnTxHash', async (req: Request, res: Respo
       eventSignature,
       tokenIndex,
       isMainnet,
-      version
+      version,
+      req.log
     );
+    res.json(responseObj);
+  });
 
-    return handleResponse({ res, data: responseObj });
-  } catch (error) {
-    if (error instanceof InfoError) {
-      return handleError({ res, statusCode: 404, err: error });
-    }
-    logger.error({ message: 'error in callExitPayload route', error });
-    return handleError({ res });
-  }
-});
-
-router.get('/:network/all-exit-payloads/:burnTxHash', async (req: Request, res: Response) => {
-  try {
+  router.get('/:network/all-exit-payloads/:burnTxHash', async (req: Request, res: Response) => {
     const result = AllExitPayloadsSchema.safeParse({ params: req.params, query: req.query });
     if (!result.success) {
-      return handleBadRequest({
-        res,
-        errMsg: result.error.issues[0]?.message ?? 'Invalid request'
-      });
+      throw new BadRequest(result.error.issues[0]?.message ?? 'Invalid request');
     }
 
     const { network, burnTxHash } = result.data.params;
@@ -178,17 +133,11 @@ router.get('/:network/all-exit-payloads/:burnTxHash', async (req: Request, res: 
       burnTxHash,
       eventSignature,
       isMainnet,
-      version
+      version,
+      req.log
     );
+    res.json(responseObj);
+  });
 
-    return handleResponse({ res, data: responseObj });
-  } catch (error) {
-    if (error instanceof InfoError) {
-      return handleError({ res, statusCode: 404, err: error });
-    }
-    logger.error({ message: 'error in allExitPayloads route', error });
-    return handleError({ res });
-  }
-});
-
-export { router as v1Routes };
+  return router;
+}

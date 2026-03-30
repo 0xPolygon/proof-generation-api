@@ -43,7 +43,9 @@ const parseRpcUrlArray = (val: string, ctx: z.RefinementCtx) => {
 };
 
 // Ref: https://github.com/t3-oss/t3-env/pull/145
-const booleanStrings = ['true', 'false', true, false, '1', '0', 'yes', 'no', 'y', 'n', 'on', 'off'];
+const truthyStrings = ['true', 'yes', 'y', '1', 'on'];
+const falsyStrings = ['false', 'no', 'n', '0', 'off'];
+const booleanStrings = [...truthyStrings, ...falsyStrings, true, false];
 
 const BooleanOrBooleanStringSchema = z
   .any()
@@ -52,8 +54,8 @@ const BooleanOrBooleanStringSchema = z
     if (typeof val === 'boolean') return val;
     if (typeof val === 'string') {
       const normalized = val.toLowerCase().trim();
-      if (['true', 'yes', 'y', '1', 'on'].includes(normalized)) return true;
-      if (['false', 'no', 'n', '0', 'off'].includes(normalized)) return false;
+      if (truthyStrings.includes(normalized)) return true;
+      if (falsyStrings.includes(normalized)) return false;
       throw new Error(`Invalid boolean string: "${val}"`);
     }
     throw new Error(`Expected boolean or boolean string, got: ${typeof val}`);

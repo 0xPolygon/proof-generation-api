@@ -1,13 +1,13 @@
 import { Router } from 'express';
 
 import { openApiRouter } from './openapi.ts';
-import { v1Routes } from './v1.ts';
-import { zkEVMRoutes } from './zkEVM.ts';
+import { createV1Router } from './v1.ts';
+import { createZkEVMRouter } from './zkEVM.ts';
 
-const router = Router();
-
-router.use('/', openApiRouter);
-router.use('/v1', v1Routes);
-router.use('/zkevm', zkEVMRoutes);
-
-export { router as indexRoutes };
+export function createIndexRouter(): Router {
+  const router = Router();
+  router.use('/', openApiRouter);
+  router.use('/v1', createV1Router());
+  router.use('/zkevm', createZkEVMRouter());
+  return router;
+}

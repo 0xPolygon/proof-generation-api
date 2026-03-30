@@ -33,7 +33,7 @@ describe('block inclusion', { timeout: 30_000 }, () => {
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
-    expect(res).property('body').property('msg', 'Invalid block number!');
+    expect(res).property('body').property('message', 'Invalid block number!');
   });
 
   it('should return 400 with correct message for a non-numeric block number', async () => {
@@ -41,6 +41,6 @@ describe('block inclusion', { timeout: 30_000 }, () => {
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
-    expect(res).property('body').property('msg', 'Invalid block number!');
+    expect(res).property('body').property('message', 'Invalid block number!');
   });
 });

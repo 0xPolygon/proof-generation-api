@@ -1,12 +1,7 @@
-import { config } from '../config.ts';
-import { errorTypes } from '../constants.ts';
-import { InfoError } from '../helpers/errorHelper.ts';
-import { getLogger } from '../logger.ts';
+import type { Logger } from '../logger.ts';
 
-let _logger: ReturnType<typeof getLogger> | undefined;
-const logger = new Proxy({} as ReturnType<typeof getLogger>, {
-  get: (_, key) => Reflect.get((_logger ??= getLogger()), key as PropertyKey)
-});
+import { config } from '../config.ts';
+import { ZKEVMServiceError } from '../errors.ts';
 
 function getBridgeAPIUrl(network: string) {
   switch (network) {
@@ -21,14 +16,12 @@ function getBridgeAPIUrl(network: string) {
   }
 }
 
-/**
- *
- * @param {number} networkID
- * @param {number} depositCount
- * @param {string} network
- * @returns
- */
-export async function bridge(networkID: number, depositCount: number, network: string) {
+export async function bridge(
+  networkID: number,
+  depositCount: number,
+  network: string,
+  logger: Logger
+) {
   const zkEVMURL = getBridgeAPIUrl(network);
 
   const response = await fetch(
@@ -37,25 +30,25 @@ export async function bridge(networkID: number, depositCount: number, network: s
   const data: any = await response.json();
 
   if (response.status !== 200) {
-    logger.info(
-      `Error hitting ${zkEVMURL} bridge with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(data)}`
+    logger.warn(
+      { url: zkEVMURL, networkID, depositCount, status: response.status },
+      'zkEVM bridge returned non-200'
     );
-    throw new InfoError(errorTypes.ZKEVMError, data.message);
+    // skipCauseMessage (WError semantics): the cause carries the upstream status
+    // and message for the logger; the outer message stays clean for the HTTP response.
+    throw new ZKEVMServiceError('zkEVM bridge request failed', {
+      cause: new Error(`HTTP ${response.status}: ${String(data.message ?? 'no message')}`),
+      skipCauseMessage: true
+    });
   }
   return data;
 }
 
-/**
- *
- * @param {number} networkID
- * @param {number} depositCount
- * @param {string} network
- * @returns
- */
 export async function merkelProofGenerator(
   networkID: number,
   depositCount: number,
-  network: string
+  network: string,
+  logger: Logger
 ) {
   const zkEVMURL = getBridgeAPIUrl(network);
 
@@ -65,10 +58,16 @@ export async function merkelProofGenerator(
   const data: any = await response.json();
 
   if (response.status !== 200) {
-    logger.info(
-      `Error hitting ${zkEVMURL} merkle proof with networkId ${networkID} and deposit count ${depositCount} - ${JSON.stringify(data)}`
+    logger.warn(
+      { url: zkEVMURL, networkID, depositCount, status: response.status },
+      'zkEVM merkle-proof returned non-200'
     );
-    throw new InfoError(errorTypes.ZKEVMError, data.message);
+    // skipCauseMessage (WError semantics): the cause carries the upstream status
+    // and message for the logger; the outer message stays clean for the HTTP response.
+    throw new ZKEVMServiceError('zkEVM bridge request failed', {
+      cause: new Error(`HTTP ${response.status}: ${String(data.message ?? 'no message')}`),
+      skipCauseMessage: true
+    });
   }
   return data;
 }

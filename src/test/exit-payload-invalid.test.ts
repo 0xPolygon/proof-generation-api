@@ -14,7 +14,7 @@ describe('matic exit payload — invalid arguments', { timeout: 60_000 }, () => 
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
-    expect(res).property('body').property('msg', 'Incorrect Burn tx or Event Signature!');
+    expect(res).property('body').property('message', 'Incorrect Burn tx or Event Signature!');
   });
 
   // Both burnTxHash and eventSignature too short — wrong format
@@ -25,7 +25,7 @@ describe('matic exit payload — invalid arguments', { timeout: 60_000 }, () => 
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
-    expect(res).property('body').property('msg', 'Incorrect Burn tx or Event Signature!');
+    expect(res).property('body').property('message', 'Incorrect Burn tx or Event Signature!');
   });
 
   // missing eventSignature query param — treated as absent/empty
@@ -34,7 +34,7 @@ describe('matic exit payload — invalid arguments', { timeout: 60_000 }, () => 
 
     expect(res).property('status', 400);
     expect(res).property('body').property('error', true);
-    expect(res).property('body').property('msg', 'Invalid burnTxHash or eventSignature!');
+    expect(res).property('body').property('message', 'Invalid burnTxHash or eventSignature!');
   });
 
   // valid args but no matching on-chain data → 404
