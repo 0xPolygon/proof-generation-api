@@ -53,7 +53,7 @@ docker stop proof-gen-test
 
 ## Architecture
 
-**Entry point:** `src/bin/apiServer.ts` — imports `src/instrument.ts` (Sentry, must load first) then calls `startApiServer()` from `src/index.ts`.
+**Entry point:** `src/bin/apiServer.ts` — imports `src/sentry.ts` (Sentry, must load first) then calls `startApiServer()` from `src/index.ts`.
 
 **Request flow:** Express v5 → CORS → JSON parser → `/health-check` → `/api` routes
 

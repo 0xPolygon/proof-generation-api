@@ -1,6 +1,6 @@
 // Must be first: initializes Sentry before any other module loads.
 
-import '../instrument.ts';
+import '../sentry.ts';
 import { getEnv } from '../env.ts';
 import { getExpressApp, startApiServer } from '../index.ts';
 import { createLogger } from '../logger.ts';
