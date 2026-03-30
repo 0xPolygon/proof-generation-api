@@ -37,6 +37,7 @@
     "@tsconfig/node24": "^24.0.4",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/express-serve-static-core": "^5.1.1",
     "@types/node": "^24.0.0",
     "@types/supertest": "^6.0.3",
     "@types/yargs": "^17.0.35",
