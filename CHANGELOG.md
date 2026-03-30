@@ -1,5 +1,34 @@
 # proof-generation-api
 
+## 1.0.2
+
+### Patch Changes
+
+- 9647a44: Enforce coupled RPC array length at startup; document provider-pairing constraint in README, .env.example, and CLAUDE.md
+- 7de8ede: Fix memory leak causing OOMKill under load.
+
+  Each proof generation request previously created new `ethers.js` provider instances and a `POSClient` on every attempt, including retries. These held HTTP connection pools and event emitters that the GC could not promptly reclaim, causing working-set memory to grow monotonically under concurrent traffic until the container hit its 2 GiB limit.
+
+  Two changes address this:
+  - **Provider singleton cache** — `POSClient` instances are now cached by RPC endpoint pair for the lifetime of the process. All requests and retries share the same initialised client rather than creating new ones.
+  - **`StaticJsonRpcProvider` instead of `JsonRpcProvider`** — the static variant makes no background block-polling calls and holds no cached chain state, making it safe to keep alive indefinitely. The regular provider's 4-second polling loop was accumulating memory in long-lived cached instances.
+
+  Additionally, the 1-second sleep between RPC retries has been removed. Retries switch to a different provider immediately — there is no reason to wait before trying a healthy endpoint.
+
+- ee9fa21: Sync OpenAPI spec version with package.json; rewrite route descriptions to reflect current architecture
+- 0cd3878: Replace Winston with the shared pino logger and migrate errors to VError.
+
+  The logger now uses `@polygonlabs/logger` (pino-based), pre-configured for
+  Datadog log ingestion and automatic Sentry capture on `logger.error({ err })`
+  calls. Log fields are structured — the `err` key triggers VError cause-chain
+  unwrapping and Sentry exception capture; other error fields are no longer
+  silently swallowed.
+
+  The custom `InfoError(type, message)` class is replaced with a
+  `@polygonlabs/verror` hierarchy (`BlockNotIncludedError`, `IncorrectTxError`,
+  `TxNotCheckpointedError`, `ZKEVMServiceError`). Error names are now visible in
+  Sentry grouping rather than all appearing as a generic class.
+
 ## 1.0.1
 
 ### Patch Changes
