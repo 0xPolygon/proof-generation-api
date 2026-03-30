@@ -1,45 +1,53 @@
 import { createEnv } from '@t3-oss/env-core';
 import { z } from 'zod';
 
-// Validates that val is a JSON-encoded string array of RPC URLs.
-// rpc.polygon.tools requires https:// — ethers.js JsonRpcProvider does not follow
-// 301 redirects and throws event="noNetwork" instead of failing loudly when given
-// an http:// endpoint, and that host does not accept plain http. All other hosts
-// accept either protocol (e.g. in-cluster proxies use http://).
-const parseRpcUrlArray = (val: string, ctx: z.RefinementCtx) => {
+// Validates a single RPC URL. Error messages use the URL origin only —
+// never the full URL, which may contain secret tokens in query parameters.
+// rpc.polygon.tools is a public endpoint that redirects http:// requests
+// with a 301. Ethers never follows redirects — it interprets the non-200
+// response as event="noNetwork", making the RPC appear dead when healthy.
+// All other RPC hosts (e.g. in-cluster proxies) accept http or https.
+const RpcUrlSchema = z.string().superRefine((url, ctx) => {
+  let u: URL;
   try {
-    const parsed = JSON.parse(val);
-    if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === 'string')) {
-      ctx.addIssue('Must be a valid JSON string array.');
-      return z.NEVER;
-    }
-    for (const url of parsed as string[]) {
-      let u: URL;
-      try {
-        u = new URL(url);
-      } catch {
-        ctx.addIssue(`Contains an invalid URL: "${url}"`);
-        return z.NEVER;
-      }
-      if (u.hostname === 'rpc.polygon.tools' && u.protocol !== 'https:') {
-        // Log only the origin — never the full URL, which may contain secret tokens.
-        ctx.addIssue(
-          `Contains a non-HTTPS URL: "${u.origin}". rpc.polygon.tools requires https://.`
-        );
-        return z.NEVER;
-      }
-      if (u.protocol !== 'https:' && u.protocol !== 'http:') {
-        ctx.addIssue(
-          `Contains a URL with an unsupported protocol: "${u.origin}". Use https:// or http://.`
-        );
-        return z.NEVER;
-      }
-    }
-    return parsed as string[];
+    u = new URL(url);
+  } catch {
+    ctx.addIssue(`Invalid URL`);
+    return;
+  }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') {
+    ctx.addIssue(`"${u.origin}" must use https:// or http://`);
+    return;
+  }
+  if (u.hostname === 'rpc.polygon.tools' && u.protocol !== 'https:') {
+    ctx.addIssue(
+      `"${u.origin}" — rpc.polygon.tools requires https:// (http:// triggers a 301 that ethers never follows)`
+    );
+  }
+});
+
+// Parses a JSON-encoded string array of RPC URLs, validating each element
+// with RpcUrlSchema. Used as a .transform() callback in the env schema.
+const parseRpcUrlArray = (val: string, ctx: z.RefinementCtx) => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(val);
   } catch {
     ctx.addIssue('Must be valid JSON.');
     return z.NEVER;
   }
+  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === 'string')) {
+    ctx.addIssue('Must be a valid JSON string array.');
+    return z.NEVER;
+  }
+  for (const url of parsed as string[]) {
+    const result = RpcUrlSchema.safeParse(url);
+    if (!result.success) {
+      ctx.addIssue(result.error.issues[0]?.message ?? 'Invalid RPC URL');
+      return z.NEVER;
+    }
+  }
+  return parsed as string[];
 };
 
 // Ref: https://github.com/t3-oss/t3-env/pull/145
