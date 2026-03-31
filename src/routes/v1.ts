@@ -60,6 +60,7 @@ export function createV1Router(): Router {
     const { network, blockNumber } = result.data.params;
     const { version, isMainnet } = networkDetails[network];
 
+    req.log.debug({ network, blockNumber }, 'block-included request');
     const responseObj = await isBlockIncluded(blockNumber, isMainnet, version, req.log);
     res.json(responseObj);
   });
@@ -79,6 +80,7 @@ export function createV1Router(): Router {
 
     const { version, isMainnet } = networkDetails[network];
 
+    req.log.debug({ network, start, end, number }, 'fast-merkle-proof request');
     const responseObj = await fastMerkleProof(
       String(start),
       String(end),
@@ -108,6 +110,7 @@ export function createV1Router(): Router {
     const { eventSignature, tokenIndex } = result.data.query;
     const { version, isMainnet } = networkDetails[network];
 
+    req.log.debug({ network, burnTxHash, eventSignature, tokenIndex }, 'exit-payload request');
     const responseObj = await generateExitPayload(
       burnTxHash,
       eventSignature,
@@ -129,6 +132,7 @@ export function createV1Router(): Router {
     const { eventSignature } = result.data.query;
     const { version, isMainnet } = networkDetails[network];
 
+    req.log.debug({ network, burnTxHash, eventSignature }, 'all-exit-payloads request');
     const responseObj = await generateAllExitPayloads(
       burnTxHash,
       eventSignature,

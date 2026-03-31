@@ -19,6 +19,7 @@ export function createZkEVMRouter(): Router {
     const { network } = result.data.params;
     const { net_id, deposit_cnt } = result.data.query;
 
+    req.log.debug({ network, net_id, deposit_cnt }, 'zkEVM bridge request');
     const responseObj = await bridge(net_id, deposit_cnt, network, req.log);
     res.json(responseObj);
   });
@@ -32,6 +33,7 @@ export function createZkEVMRouter(): Router {
     const { network } = result.data.params;
     const { net_id, deposit_cnt } = result.data.query;
 
+    req.log.debug({ network, net_id, deposit_cnt }, 'zkEVM merkle-proof request');
     const responseObj = await merkelProofGenerator(net_id, deposit_cnt, network, req.log);
     res.json(responseObj);
   });
