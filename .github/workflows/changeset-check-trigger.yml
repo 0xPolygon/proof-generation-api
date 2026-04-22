@@ -10,4 +10,4 @@ permissions:
 
 jobs:
   check:
-    uses: ./.github/workflows/changeset-check.yml
+    uses: 0xPolygon/pipelines/.github/workflows/apps-changeset-check.yml@main

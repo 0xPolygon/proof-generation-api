@@ -35,11 +35,8 @@ jobs:
       checkout_ref: ${{ steps.docker-test.outputs.checkout_ref }}
       should_build: ${{ steps.docker-test.outputs.should_build }}
     steps:
-      # Checkout is required so the runner can find .github/actions/docker-test/action.yml
-      # on the filesystem. docker-test then does its own checkout at the release tag.
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - id: docker-test
-        uses: ./.github/actions/docker-test
+        uses: 0xPolygon/pipelines/.github/actions/docker-test@main
         with:
           tag: ${{ inputs.tag || '' }}
           test_vars: AMOY_RPC ETHEREUM_RPC MATIC_RPC SEPOLIA_RPC ZKEVM_MAINNET_URL ZKEVM_TESTNET_URL
@@ -47,7 +44,7 @@ jobs:
   release:
     needs: test
     if: needs.test.outputs.should_build == 'true'
-    uses: ./.github/workflows/docker-release.yml
+    uses: 0xPolygon/pipelines/.github/workflows/apps-docker-release.yml@main
     with:
       image_name: ${{ needs.test.outputs.image_name }}
       image_tag: ${{ needs.test.outputs.image_tag }}
