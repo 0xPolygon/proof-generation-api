@@ -1,5 +1,9 @@
 # proof-generation-api
 
+[![CI](https://github.com/0xPolygon/proof-generation-api/actions/workflows/ci-trigger.yml/badge.svg)](https://github.com/0xPolygon/proof-generation-api/actions/workflows/ci-trigger.yml)
+[![Release](https://github.com/0xPolygon/proof-generation-api/actions/workflows/npm-release-trigger.yml/badge.svg)](https://github.com/0xPolygon/proof-generation-api/actions/workflows/npm-release-trigger.yml)
+[![Docker release](https://github.com/0xPolygon/proof-generation-api/actions/workflows/docker-release-trigger.yml/badge.svg)](https://github.com/0xPolygon/proof-generation-api/actions/workflows/docker-release-trigger.yml)
+
 Backend service for Polygon bridge exit proof generation. Consumed primarily by the Matic SDK.
 
 Interactive API docs are available at `/api/docs` when the server is running.
