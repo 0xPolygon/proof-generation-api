@@ -1,2 +1,0 @@
-# Hide generated action dist from PR diffs — copied verbatim from apps-team-workflows
-.github/actions/upsert-changeset-comment/dist/** -diff linguist-generated=true

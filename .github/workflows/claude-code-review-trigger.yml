@@ -13,6 +13,6 @@ permissions:
 
 jobs:
   claude-review:
-    uses: ./.github/workflows/claude-code-review.yml
+    uses: 0xPolygon/pipelines/.github/workflows/apps-claude-code-review.yml@main
     secrets:
       CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}

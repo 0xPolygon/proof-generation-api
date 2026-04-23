@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   release:
-    uses: ./.github/workflows/npm-release.yml
+    uses: 0xPolygon/pipelines/.github/workflows/apps-npm-release.yml@main
     secrets:
       CHANGESET_RELEASE_BOT_APP_ID: ${{ secrets.CHANGESET_RELEASE_BOT_APP_ID }}
       CHANGESET_RELEASE_BOT_APP_PRIVATE_KEY: ${{ secrets.CHANGESET_RELEASE_BOT_APP_PRIVATE_KEY }}
