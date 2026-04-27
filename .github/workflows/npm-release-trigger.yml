@@ -12,6 +12,11 @@ permissions:
 jobs:
   release:
     uses: 0xPolygon/pipelines/.github/workflows/apps-npm-release.yml@main
+    # proof-generation-api's default branch is `master`, not `main`. The
+    # shared workflow uses this for the post-publish lockfile commit
+    # (PATCH refs/heads/<branch>) and the pre-tag fast-forward fetch.
+    with:
+      default_branch: master
     secrets:
       CHANGESET_RELEASE_BOT_APP_ID: ${{ secrets.CHANGESET_RELEASE_BOT_APP_ID }}
       CHANGESET_RELEASE_BOT_APP_PRIVATE_KEY: ${{ secrets.CHANGESET_RELEASE_BOT_APP_PRIVATE_KEY }}
