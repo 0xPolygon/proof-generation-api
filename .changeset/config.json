@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/@changesets/config/schema.json",
-  "changelog": "@changesets/cli/changelog",
+  "changelog": ["@changesets/changelog-github", { "repo": "0xPolygon/proof-generation-api" }],
   "commit": false,
   "fixed": [],
   "linked": [],
