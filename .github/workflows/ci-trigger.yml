@@ -12,7 +12,7 @@ jobs:
     name: CI - lint / typecheck / test
     runs-on: ubuntu-latest
     env:
-      AMOY_RPC: '["https://rpc-amoy.polygon.technology"]'
+      AMOY_RPC: '["https://rpc.polygon.tools/internal/evm/80002?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
       ETHEREUM_RPC: '["https://rpc.polygon.tools/internal/evm/1?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
       MATIC_RPC: '["https://rpc.polygon.tools/internal/evm/137?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
       SEPOLIA_RPC: '["https://rpc.polygon.tools/internal/evm/11155111?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
