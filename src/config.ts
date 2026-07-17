@@ -19,9 +19,7 @@ const config = {
   },
   get debug() {
     return getEnv().NODE_ENV !== 'production';
-  },
-  mainnetRpcIndex: 0,
-  testnetRpcIndex: 0
+  }
 };
 
 export { config };

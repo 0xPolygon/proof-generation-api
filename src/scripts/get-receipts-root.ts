@@ -59,8 +59,7 @@ const argv = yargs(hideBin(process.argv))
 const txHashes: string[] = argv.tx;
 
 const rpcEnvVar = argv['amoy'] ? 'AMOY_RPC' : 'MATIC_RPC';
-const rpcList: string[] = JSON.parse(process.env[rpcEnvVar] ?? '[]');
-const rpcUrl = rpcList[0];
+const rpcUrl = process.env[rpcEnvVar];
 
 if (!rpcUrl) {
   console.error(

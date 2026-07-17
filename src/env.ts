@@ -26,30 +26,6 @@ const RpcUrlSchema = z.string().superRefine((url, ctx) => {
   }
 });
 
-// Parses a JSON-encoded string array of RPC URLs, validating each element
-// with RpcUrlSchema. Used as a .transform() callback in the env schema.
-const parseRpcUrlArray = (val: string, ctx: z.RefinementCtx) => {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(val);
-  } catch {
-    ctx.addIssue('Must be valid JSON.');
-    return z.NEVER;
-  }
-  if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === 'string')) {
-    ctx.addIssue('Must be a valid JSON string array.');
-    return z.NEVER;
-  }
-  for (const url of parsed as string[]) {
-    const result = RpcUrlSchema.safeParse(url);
-    if (!result.success) {
-      ctx.addIssue(result.error.issues[0]?.message ?? 'Invalid RPC URL');
-      return z.NEVER;
-    }
-  }
-  return parsed as string[];
-};
-
 // Ref: https://github.com/t3-oss/t3-env/pull/145
 const truthyStrings = ['true', 'yes', 'y', '1', 'on'];
 const falsyStrings = ['false', 'no', 'n', '0', 'off'];
@@ -79,10 +55,10 @@ function buildEnv() {
       NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
       NAME: z.string().default('Proof Generation API'),
       PORT: z.coerce.number().default(5000),
-      ETHEREUM_RPC: z.string().transform(parseRpcUrlArray),
-      SEPOLIA_RPC: z.string().transform(parseRpcUrlArray),
-      MATIC_RPC: z.string().transform(parseRpcUrlArray),
-      AMOY_RPC: z.string().transform(parseRpcUrlArray),
+      ETHEREUM_RPC: RpcUrlSchema,
+      SEPOLIA_RPC: RpcUrlSchema,
+      MATIC_RPC: RpcUrlSchema,
+      AMOY_RPC: RpcUrlSchema,
       ZKEVM_MAINNET_URL: z.string(),
       ZKEVM_TESTNET_URL: z.string(),
       ERPC_SECRET_TOKEN: z.string().optional(),
@@ -92,24 +68,6 @@ function buildEnv() {
     runtimeEnv: process.env,
     emptyStringAsUndefined: true
   });
-
-  // The retry logic indexes each coupled pair by the same index (index n = same provider
-  // on both sides). Mismatched lengths mean some retries will silently skip due to
-  // undefined entries, so exhausting retries without ever trying all providers.
-  if (env.ETHEREUM_RPC.length !== env.MATIC_RPC.length) {
-    throw new Error(
-      `ETHEREUM_RPC and MATIC_RPC must have the same number of entries ` +
-        `(got ${env.ETHEREUM_RPC.length} and ${env.MATIC_RPC.length}). ` +
-        `Index n in each array must be endpoints from the same provider.`
-    );
-  }
-  if (env.SEPOLIA_RPC.length !== env.AMOY_RPC.length) {
-    throw new Error(
-      `SEPOLIA_RPC and AMOY_RPC must have the same number of entries ` +
-        `(got ${env.SEPOLIA_RPC.length} and ${env.AMOY_RPC.length}). ` +
-        `Index n in each array must be endpoints from the same provider.`
-    );
-  }
 
   return env;
 }
