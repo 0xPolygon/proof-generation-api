@@ -16,35 +16,28 @@ function rpcOrigin(url: string): string {
   }
 }
 
-const getVersionDetails = (version: string) => {
-  // RPC lengths read here (not at module scope) so env validation is deferred
-  // until the first actual request when running against TEST_BASE_URL.
-  const mainnetRPCLength = config.app.maticRPC.length;
-  const mainnetMaxRetries = 2 * mainnetRPCLength;
-  const testnetAmoyRPCLength = config.app.amoyRPC.length;
-  const testnetAmoyMaxRetries = 2 * testnetAmoyRPCLength;
+// Two attempts against the single configured endpoint: the retry absorbs a
+// transient RPC failure; a second consecutive failure propagates.
+const maxRetries = 2;
 
+const getVersionDetails = (version: string) => {
+  // RPC URLs read here (not at module scope) so env validation is deferred
+  // until the first actual request when running against TEST_BASE_URL.
   switch (version) {
     case 'v1':
       return {
         ethereumRPC: config.app.ethereumRPC,
-        maticRPC: config.app.maticRPC,
-        maxRetries: mainnetMaxRetries,
-        rpcLength: mainnetRPCLength
+        maticRPC: config.app.maticRPC
       };
     case 'amoy':
       return {
         ethereumRPC: config.app.sepoliaRPC,
-        maticRPC: config.app.amoyRPC,
-        maxRetries: testnetAmoyMaxRetries,
-        rpcLength: testnetAmoyRPCLength
+        maticRPC: config.app.amoyRPC
       };
     default:
       return {
         ethereumRPC: config.app.ethereumRPC,
-        maticRPC: config.app.maticRPC,
-        maxRetries: mainnetMaxRetries,
-        rpcLength: mainnetRPCLength
+        maticRPC: config.app.maticRPC
       };
   }
 };
@@ -55,22 +48,13 @@ export async function isBlockIncluded(
   version: string,
   logger: Logger
 ) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
-  const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
+  const { ethereumRPC, maticRPC } = getVersionDetails(version);
 
   let result;
 
   for (let i = 0; i < maxRetries; i++) {
-    const rpcIndex = (initialRpcIndex + i) % rpcLength;
-    const maticRPCUrl = maticRPC[rpcIndex];
-    const ethereumRPCUrl = ethereumRPC[rpcIndex];
-
-    if (!maticRPCUrl || !ethereumRPCUrl) {
-      continue;
-    }
-
     try {
-      const rootChain = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl).then(
+      const rootChain = await initMatic(isMainnet, version, maticRPC, ethereumRPC).then(
         (maticClient: any) => {
           return maticClient.exitUtil.rootChain;
         }
@@ -116,8 +100,8 @@ export async function isBlockIncluded(
           err,
           blockNumber,
           network: version,
-          maticRpcOrigin: rpcOrigin(maticRPCUrl),
-          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+          maticRpcOrigin: rpcOrigin(maticRPC),
+          ethereumRpcOrigin: rpcOrigin(ethereumRPC),
           attempt: i + 1,
           maxRetries,
           errorEvent: maticjsErr['event'],
@@ -138,22 +122,13 @@ export async function fastMerkleProof(
   version: string,
   logger: Logger
 ) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
-  const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
+  const { ethereumRPC, maticRPC } = getVersionDetails(version);
 
   let proof;
 
   for (let i = 0; i < maxRetries; i++) {
-    const rpcIndex = (initialRpcIndex + i) % rpcLength;
-    const maticRPCUrl = maticRPC[rpcIndex];
-    const ethereumRPCUrl = ethereumRPC[rpcIndex];
-
-    if (!maticRPCUrl || !ethereumRPCUrl) {
-      continue;
-    }
-
     try {
-      const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
+      const maticClient = await initMatic(isMainnet, version, maticRPC, ethereumRPC);
       proof = await maticClient.exitUtil.getBlockProof(number, { start, end });
       break;
     } catch (error: unknown) {
@@ -167,8 +142,8 @@ export async function fastMerkleProof(
           err,
           blockNumber: number,
           network: version,
-          maticRpcOrigin: rpcOrigin(maticRPCUrl),
-          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+          maticRpcOrigin: rpcOrigin(maticRPC),
+          ethereumRpcOrigin: rpcOrigin(ethereumRPC),
           attempt: i + 1,
           maxRetries,
           errorEvent: maticjsErr['event'],
@@ -189,23 +164,14 @@ export async function generateExitPayload(
   version: string,
   logger: Logger
 ) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
-  const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
+  const { ethereumRPC, maticRPC } = getVersionDetails(version);
 
   let result;
   let isCheckpointed;
 
   for (let i = 0; i < maxRetries; i++) {
-    const rpcIndex = (initialRpcIndex + i) % rpcLength;
-    const maticRPCUrl = maticRPC[rpcIndex];
-    const ethereumRPCUrl = ethereumRPC[rpcIndex];
-
-    if (!maticRPCUrl || !ethereumRPCUrl) {
-      continue;
-    }
-
     try {
-      const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
+      const maticClient = await initMatic(isMainnet, version, maticRPC, ethereumRPC);
 
       if (!isCheckpointed) {
         try {
@@ -264,8 +230,8 @@ export async function generateExitPayload(
           err,
           burnTxHash,
           network: version,
-          maticRpcOrigin: rpcOrigin(maticRPCUrl),
-          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+          maticRpcOrigin: rpcOrigin(maticRPC),
+          ethereumRpcOrigin: rpcOrigin(ethereumRPC),
           attempt: i + 1,
           maxRetries,
           errorEvent: maticjsErr['event'],
@@ -285,23 +251,14 @@ export async function generateAllExitPayloads(
   version: string,
   logger: Logger
 ) {
-  const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
-  const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
+  const { ethereumRPC, maticRPC } = getVersionDetails(version);
 
   let result;
   let isCheckpointed;
 
   for (let i = 0; i < maxRetries; i++) {
-    const rpcIndex = (initialRpcIndex + i) % rpcLength;
-    const maticRPCUrl = maticRPC[rpcIndex];
-    const ethereumRPCUrl = ethereumRPC[rpcIndex];
-
-    if (!maticRPCUrl || !ethereumRPCUrl) {
-      continue;
-    }
-
     try {
-      const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
+      const maticClient = await initMatic(isMainnet, version, maticRPC, ethereumRPC);
 
       try {
         isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
@@ -349,8 +306,8 @@ export async function generateAllExitPayloads(
           err,
           burnTxHash,
           network: version,
-          maticRpcOrigin: rpcOrigin(maticRPCUrl),
-          ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
+          maticRpcOrigin: rpcOrigin(maticRPC),
+          ethereumRpcOrigin: rpcOrigin(ethereumRPC),
           attempt: i + 1,
           maxRetries,
           errorEvent: maticjsErr['event'],

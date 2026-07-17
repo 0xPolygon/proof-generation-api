@@ -23,11 +23,9 @@ The exit step requires a cryptographic proof: specifically, that your burn trans
 
 Generating the exit payload involves fetching the transaction receipt, constructing a Merkle proof of its inclusion in the Polygon block, locating the correct checkpoint header, and encoding everything into the exact byte format the contract expects. This requires many sequential RPC calls and non-trivial computation — too heavy to do reliably in a browser or mobile client on demand. This service does that work server-side so the SDK only needs to make a single HTTP request.
 
-### Why you should configure multiple RPC URLs
+### RPC endpoints
 
-Proof generation makes many sequential calls to the same RPC endpoint. If any call fails mid-sequence, the entire proof attempt fails and has to restart. Configuring multiple RPC URLs per network enables automatic failover across providers, which is what makes the service reliable in practice rather than fragile. Configure at least two URLs per network in production.
-
-The failover logic pairs the child-chain and parent-chain arrays by index: `MATIC_RPC[n]` is always used together with `ETHEREUM_RPC[n]`, and `AMOY_RPC[n]` with `SEPOLIA_RPC[n]`. When a retry is needed, both arrays advance to index `n+1` together. This means **index `n` in each coupled pair must be endpoints from the same provider** — if a provider is degraded, both its child-chain and parent-chain endpoints will fail, so the retry correctly skips to the next provider entirely. Mismatching providers at the same index (e.g. provider A for Ethereum and provider B for Polygon at index 0) would defeat the failover: a degraded provider A would cause a retry, which then lands on provider B for Polygon but still uses provider A for Ethereum. The two coupled pairs must also have the same number of entries.
+Each chain is configured with exactly one RPC URL. Endpoint redundancy and failover are the responsibility of the endpoint itself (in production, an RPC proxy that multiplexes providers) — not of this service. Transient RPC failures are absorbed by a single bounded retry against the same endpoint; a second consecutive failure is returned to the caller.
 
 ### zkEVM endpoints are different
 
@@ -56,17 +54,17 @@ Environment variables (all required unless marked optional):
 
 | Variable | Description |
 |----------|-------------|
-| `ETHEREUM_RPC` | JSON array of Ethereum Mainnet RPC URLs — must be same length as `MATIC_RPC`; index `n` must be the same provider |
-| `MATIC_RPC` | JSON array of Polygon Mainnet RPC URLs — must be same length as `ETHEREUM_RPC`; index `n` must be the same provider |
-| `SEPOLIA_RPC` | JSON array of Sepolia RPC URLs — must be same length as `AMOY_RPC`; index `n` must be the same provider |
-| `AMOY_RPC` | JSON array of Polygon Amoy testnet RPC URLs — must be same length as `SEPOLIA_RPC`; index `n` must be the same provider |
+| `ETHEREUM_RPC` | Ethereum Mainnet RPC URL |
+| `MATIC_RPC` | Polygon Mainnet RPC URL |
+| `SEPOLIA_RPC` | Sepolia RPC URL |
+| `AMOY_RPC` | Polygon Amoy testnet RPC URL |
 | `ZKEVM_MAINNET_URL` | zkEVM Polygon Mainnet bridge API URL |
 | `ZKEVM_TESTNET_URL` | zkEVM Cardona testnet bridge API URL |
 | `PORT` | Port to listen on (default: `5000`) |
 | `SENTRY_DSN` | Sentry DSN for error reporting (optional) |
 | `PRETTY_LOGS` | Set to `true` for human-readable log output in development (optional) |
 
-See "Why you should configure multiple RPC URLs" above for the provider-pairing constraint.
+See "RPC endpoints" above for the retry behaviour.
 
 ## Running
 
