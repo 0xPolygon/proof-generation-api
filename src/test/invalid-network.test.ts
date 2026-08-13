@@ -63,30 +63,4 @@ describe('invalid network param tests', () => {
         'Invalid network mainnet. Network can either be matic or amoy for PoS v1 routes'
       );
   });
-
-  it('should 400 for `polygon` on zkEVM bridge — msg contains network name', async () => {
-    const res = await getAgent().get('/api/zkevm/polygon/bridge?net_id=1&deposit_cnt=1');
-
-    expect(res).property('status', 400);
-    expect(res).property('body').property('error', true);
-    expect(res)
-      .property('body')
-      .property(
-        'message',
-        'Invalid network polygon. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes'
-      );
-  });
-
-  it('should 400 for `polygon` on zkEVM merkle-proof — msg contains network name', async () => {
-    const res = await getAgent().get('/api/zkevm/polygon/merkle-proof?net_id=1&deposit_cnt=1');
-
-    expect(res).property('status', 400);
-    expect(res).property('body').property('error', true);
-    expect(res)
-      .property('body')
-      .property(
-        'message',
-        'Invalid network polygon. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes'
-      );
-  });
 });

@@ -15,11 +15,6 @@ const V1NetworkSchema = z.enum(['matic', 'amoy'] as const, {
     `Invalid network ${String(issue.input)}. Network can either be matic or amoy for PoS v1 routes`
 });
 
-const ZkEVMNetworkSchema = z.enum(['mainnet', 'testnet', 'cherry', 'cardona'] as const, {
-  error: (issue) =>
-    `Invalid network ${String(issue.input)}. Network can either be mainnet, testnet, cherry or cardona for zkEVM routes`
-});
-
 // Request schemas — each wraps { params, query } so a single safeParse covers both
 
 export const BlockIncludedSchema = z.object({
@@ -79,23 +74,5 @@ export const AllExitPayloadsSchema = z.object({
   }),
   query: z.object({
     eventSignature: HexBytes32Schema.openapi({ description: 'Event signature hash (0x + 64 hex)' })
-  })
-});
-
-export const ZkEVMDepositSchema = z.object({
-  params: z.object({
-    network: ZkEVMNetworkSchema.openapi({ description: 'zkEVM network identifier' })
-  }),
-  query: z.object({
-    net_id: z.coerce
-      .number({ error: () => 'Invalid network ID or deposit count!' })
-      .int({ message: 'Invalid network ID or deposit count!' })
-      .nonnegative({ message: 'Invalid network ID or deposit count!' })
-      .openapi({ description: 'Network ID' }),
-    deposit_cnt: z.coerce
-      .number({ error: () => 'Invalid network ID or deposit count!' })
-      .int({ message: 'Invalid network ID or deposit count!' })
-      .nonnegative({ message: 'Invalid network ID or deposit count!' })
-      .openapi({ description: 'Deposit count' })
   })
 });

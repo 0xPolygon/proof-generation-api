@@ -23,8 +23,3 @@ export class TxNotCheckpointedError extends HTTPError {
   override readonly name = 'TxNotCheckpointedError' as const;
   override readonly statusCode = 404 as const;
 }
-
-export class ZKEVMServiceError extends HTTPError {
-  override readonly name = 'ZKEVMServiceError' as const;
-  override readonly statusCode = 404 as const;
-}

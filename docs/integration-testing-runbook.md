@@ -2,7 +2,7 @@
 
 ## Overview
 
-This service sits between callers and the Polygon bridge contracts. It generates cryptographic proofs required for users to withdraw assets from the Polygon PoS bridge and zkEVM bridge back to Ethereum. Every endpoint requires on-chain data as input — there is no way to "make up" valid inputs; they must come from real transactions and blocks on the respective chains.
+This service sits between callers and the Polygon bridge contracts. It generates cryptographic proofs required for users to withdraw assets from the Polygon PoS bridge back to Ethereum. Every endpoint requires on-chain data as input — there is no way to "make up" valid inputs; they must come from real transactions and blocks on the respective chains.
 
 This runbook explains how to find those inputs, verify them, pin them as integration test cases, and wire them into Datadog synthetic monitors.
 
@@ -15,7 +15,6 @@ This runbook explains how to find those inputs, verify them, pin them as integra
 | [Polygonscan](https://polygonscan.com)                | Explore Polygon PoS mainnet transactions, blocks, logs                                          |
 | [Etherscan](https://etherscan.io)                     | Verify checkpoint submissions on Ethereum mainnet                                               |
 | Production service                                    | `https://proof-generator.polygon.technology` — use to validate discovered inputs before pinning |
-| [zkEVM bridge explorer](https://bridge.zkevm-rpc.com) | Find valid deposits for zkEVM endpoints                                                         |
 | `curl` or HTTPie                                      | Validate discovered inputs against production                                                   |
 
 ### Common Event Signatures
@@ -396,71 +395,6 @@ it('ERC-721 batch exit payloads test ({N} tokens)', async function () {
 
 ---
 
-## Endpoint 5: zkEVM `bridge`
-
-**URL pattern:** `GET /api/zkevm/{network}/bridge?net_id={networkID}&deposit_cnt={depositCount}`
-
-**What it returns:** Bridge deposit data from the external zkEVM bridge API.
-
-### Finding valid inputs
-
-The zkEVM bridge uses a deposit counter model. Each deposit gets an incrementing integer index.
-
-- **`net_id=0`** = Ethereum L1 (deposits FROM Ethereum TO zkEVM)
-- **`net_id=1`** = Polygon zkEVM L2 (deposits FROM zkEVM TO Ethereum)
-
-**Known-good starting point:** `net_id=1&deposit_cnt=1` is the very first deposit ever made to the zkEVM mainnet bridge. It is always valid and has been ready-to-claim since bridge launch. This is the recommended value for integration tests.
-
-Validate:
-
-```sh
-curl "https://proof-generator.polygon.technology/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1"
-```
-
-### Pinning the test case
-
-The `deposit` object fields are stable and safe to pin: `tx_hash`, `deposit_cnt`, `network_id`, `ready_for_claim`. Do **not** pin `block_num` or `claim_tx_hash` as these might change format in API updates.
-
-```typescript
-it('zkEVM bridge deposit lookup', async function () {
-  const res = await request(app).get('/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1');
-  expect(res).property('status', 200);
-  expect(res.body).to.have.property('deposit');
-  expect(res.body.deposit).to.have.property(
-    'tx_hash',
-    '0xb07cd0b30019c78c0b60e464c7c38a0a8076a355dbe9177205573e86455f31b6'
-  );
-  expect(res.body.deposit).to.have.property('deposit_cnt', 1);
-  expect(res.body.deposit).to.have.property('ready_for_claim', true);
-});
-```
-
----
-
-## Endpoint 6: zkEVM `merkle-proof`
-
-**URL pattern:** `GET /api/zkevm/{network}/merkle-proof?net_id={networkID}&deposit_cnt={depositCount}`
-
-**What it returns:** Merkle proof required to claim a zkEVM bridge deposit on the destination chain.
-
-### Finding valid inputs
-
-Same as the `bridge` endpoint — use the same `net_id` and `deposit_cnt`. The deposit must be **ready to claim** (included in the Merkle tree, bridge state synced). An early-stage deposit may return an error from the external API.
-
-Use `net_id=1&deposit_cnt=1` as the known-good starting point (same as the `bridge` endpoint).
-
-Validate:
-
-```sh
-curl "https://proof-generator.polygon.technology/api/zkevm/mainnet/merkle-proof?net_id=1&deposit_cnt=1"
-```
-
-> **What to pin:** The response includes `proof.merkle_proof` (array of sibling hashes) and `proof.rollup_merkle_proof`. Do **not** pin `proof.main_exit_root` or `proof.rollup_exit_root` — these represent the **current** state of the bridge Merkle tree and change as new deposits are added. Pin only that the `proof` field is present and that `proof.merkle_proof` is a non-empty array.
-
-Confirm HTTP 200 and a populated `proof` object with a non-empty `merkle_proof` array.
-
----
-
 ## Adding New Test Cases to the test files
 
 ### Step 1 — Validate the URL against production
@@ -551,8 +485,6 @@ npm test
 | `exit-payload (ERC-20)`    | `/api/v1/matic/exit-payload/{tx}?eventSignature=0xddf252...`         | status=200, `result` is non-empty hex string  | 10 min         |
 | `exit-payload (ERC-1155)`  | `/api/v1/matic/exit-payload/{tx}?eventSignature=0x4a39dc...`         | status=200, `result` is non-empty hex string  | 10 min         |
 | `all-exit-payloads`        | `/api/v1/matic/all-exit-payloads/{tx}?eventSignature=0xddf252...`    | status=200, `result.length` = N               | 10 min         |
-| `zkEVM bridge`             | `/api/zkevm/mainnet/bridge?net_id=1&deposit_cnt=1`                   | status=200, `deposit.tx_hash` matches pinned  | 10 min         |
-| `zkEVM merkle-proof`       | `/api/zkevm/mainnet/merkle-proof?net_id=1&deposit_cnt=1`             | status=200, `proof.merkle_proof` is non-empty | 10 min         |
 
 ### Alert thresholds
 
@@ -574,8 +506,6 @@ npm test
 | `exit-payload` (ERC-1155)           | `0x4d4a9ee...fe` + TransferBatch sig (block 18113528) | 200, receiptsRoot=`0xeb2448...`, ERC-1155 contract, TransferBatch-to-zero, operator `0x28c9c1...`                | receiptsRoot verifiable on Polygonscan block 18113528               |
 | `all-exit-payloads` (ERC-721)       | `0xdc3e4c...50` + ERC-20 sig (block 81892489)         | 200, result.length=1, each payload: receiptsRoot=`0xf9210b...`, ERC-721 contract `0x9ab26d...`, Transfer-to-zero | receiptsRoot verifiable on Polygonscan block 81892489               |
 | `exit-payload` (invalid tokenIndex) | `0x1a7b6aba...b4` + ERC-20 sig + tokenIndex=1         | 404                                                                                                              | Only 1 matching event; index 1 is out of range                      |
-| `zkEVM bridge`                      | net_id=1 deposit_cnt=1                                | 200, deposit.tx_hash=`0xb07cd0b3...`                                                                             | First-ever zkEVM mainnet deposit; always valid                      |
-| `zkEVM merkle-proof`                | net_id=1 deposit_cnt=1                                | 200, proof.merkle_proof is non-empty array                                                                       | Proof path changes as tree grows; do not pin root hash values       |
 
 ---
 
