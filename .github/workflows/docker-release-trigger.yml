@@ -20,9 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # RPC URLs required by the service at runtime and during tests.
-      # AMOY_RPC is a public endpoint with no secret.
+      # All four use the eRPC client token; rpc-amoy.polygon.technology (the
+      # public endpoint previously used for AMOY_RPC) no longer resolves.
       # ETHEREUM_RPC, MATIC_RPC, and SEPOLIA_RPC use an eRPC client token.
-      AMOY_RPC: '["https://rpc-amoy.polygon.technology"]'
+      AMOY_RPC: '["https://rpc.polygon.tools/internal/evm/80002?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
       ETHEREUM_RPC: '["https://rpc.polygon.tools/internal/evm/1?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
       MATIC_RPC: '["https://rpc.polygon.tools/internal/evm/137?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
       SEPOLIA_RPC: '["https://rpc.polygon.tools/internal/evm/11155111?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
