@@ -234,12 +234,12 @@ export async function generateExitPayload(
       } catch (buildError: unknown) {
         const err = buildError instanceof Error ? buildError : new Error(String(buildError));
         if (err.message === 'Index is greater than the number of tokens in this transaction') {
-          // skipCauseMessage (WError semantics): the outer message stays clean for
-          // the HTTP response; the original maticjs error is preserved in the cause
-          // chain for the logger to unwrap.
+          // BlockNotIncludedError extends HTTPError, which is W-by-default (verror
+          // 1.1+): the outer message stays clean for the HTTP response automatically;
+          // the original maticjs error is preserved in the cause chain for the logger
+          // to unwrap.
           throw new BlockNotIncludedError('Token index out of range for this transaction', {
-            cause: err,
-            skipCauseMessage: true
+            cause: err
           });
         }
         if (i === maxRetries - 1) {
