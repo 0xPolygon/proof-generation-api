@@ -7,6 +7,7 @@
 - [#89](https://github.com/0xPolygon/proof-generation-api/pull/89) [`58a7e8b`](https://github.com/0xPolygon/proof-generation-api/commit/58a7e8bd4c7212544177f2c1e41ef6e530604c88) Thanks [@shan8851](https://github.com/shan8851)! - Remove the zkEVM proof-generation endpoints (`/zkevm/mainnet` and `/zkevm/testnet` routes) — the underlying chains are sunset and their infrastructure no longer answers. PoS (v1) endpoints are unchanged.
 
   ## Breaking changes
+
   - Removed `GET /api/zkevm/{network}/bridge`
   - Removed `GET /api/zkevm/{network}/merkle-proof`
   - Removed the `ZKEVM_MAINNET_URL` and `ZKEVM_TESTNET_URL` environment variables — they are no longer recognized configuration
