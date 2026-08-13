@@ -20,14 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # RPC URLs required by the service at runtime and during tests.
-      # AMOY_RPC and the zkevm URLs are public endpoints with no secret.
+      # AMOY_RPC is a public endpoint with no secret.
       # ETHEREUM_RPC, MATIC_RPC, and SEPOLIA_RPC use an eRPC client token.
       AMOY_RPC: '["https://rpc-amoy.polygon.technology"]'
       ETHEREUM_RPC: '["https://rpc.polygon.tools/internal/evm/1?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
       MATIC_RPC: '["https://rpc.polygon.tools/internal/evm/137?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
       SEPOLIA_RPC: '["https://rpc.polygon.tools/internal/evm/11155111?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
-      ZKEVM_MAINNET_URL: https://bridge-api.zkevm-rpc.com
-      ZKEVM_TESTNET_URL: https://bridge-api.cardona.zkevm-rpc.com
     outputs:
       image_name: ${{ steps.docker-test.outputs.image_name }}
       image_tag: ${{ steps.docker-test.outputs.image_tag }}
@@ -39,7 +37,7 @@ jobs:
         uses: 0xPolygon/pipelines/.github/actions/docker-test@main
         with:
           tag: ${{ inputs.tag || '' }}
-          test_vars: AMOY_RPC ETHEREUM_RPC MATIC_RPC SEPOLIA_RPC ZKEVM_MAINNET_URL ZKEVM_TESTNET_URL
+          test_vars: AMOY_RPC ETHEREUM_RPC MATIC_RPC SEPOLIA_RPC
 
   release:
     needs: test

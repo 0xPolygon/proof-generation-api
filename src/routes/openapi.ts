@@ -15,8 +15,7 @@ import {
   AllExitPayloadsSchema,
   BlockIncludedSchema,
   ExitPayloadSchema,
-  FastMerkleProofSchema,
-  ZkEVMDepositSchema
+  FastMerkleProofSchema
 } from '../schemas.ts';
 
 // extendZodWithOpenApi is already called in schemas.ts; calling again is harmless
@@ -141,55 +140,6 @@ registry.registerPath({
   }
 });
 
-registry.registerPath({
-  method: 'get',
-  path: '/zkevm/{network}/bridge',
-  summary: 'Fetch zkEVM bridge deposit data',
-  description:
-    'Proxies the zkEVM bridge API to retrieve deposit information. Does not compute proofs from chain data.',
-  request: {
-    params: ZkEVMDepositSchema.shape.params,
-    query: ZkEVMDepositSchema.shape.query
-  },
-  responses: {
-    200: {
-      description: 'Bridge deposit data from the zkEVM bridge API',
-      content: { 'application/json': { schema: SuccessSchema } }
-    },
-    400: {
-      description: 'Invalid parameters',
-      content: { 'application/json': { schema: ErrorSchema } }
-    }
-  }
-});
-
-registry.registerPath({
-  method: 'get',
-  path: '/zkevm/{network}/merkle-proof',
-  summary: 'Fetch zkEVM Merkle proof for a deposit',
-  description:
-    'Proxies the zkEVM bridge API to retrieve the Merkle proof for a deposit. ' +
-    'Does not compute proofs from chain data — the zkEVM bridge uses validity proofs, not the checkpoint mechanism used by PoS.',
-  request: {
-    params: ZkEVMDepositSchema.shape.params,
-    query: ZkEVMDepositSchema.shape.query
-  },
-  responses: {
-    200: {
-      description: 'Merkle proof data from the zkEVM bridge API',
-      content: {
-        'application/json': {
-          schema: z.object({ proof: z.object({}) }).openapi('ZkEVMMerkleProofResponse')
-        }
-      }
-    },
-    400: {
-      description: 'Invalid parameters',
-      content: { 'application/json': { schema: ErrorSchema } }
-    }
-  }
-});
-
 const spec = new OpenApiGeneratorV3(registry.definitions).generateDocument({
   openapi: '3.0.0',
   info: {
@@ -201,8 +151,7 @@ const spec = new OpenApiGeneratorV3(registry.definitions).generateDocument({
       'checkpointed Polygon block. Generating this proof involves fetching the transaction receipt, ' +
       'constructing a Merkle proof of block inclusion, locating the correct checkpoint header, and encoding ' +
       'the result into the exact byte format the RootChainManager contract expects — too many sequential RPC ' +
-      'calls to do reliably client-side. This service does that work server-side so the SDK makes a single HTTP request.\n\n' +
-      'zkEVM endpoints proxy the zkEVM bridge API directly; they do not construct Merkle proofs from chain data.'
+      'calls to do reliably client-side. This service does that work server-side so the SDK makes a single HTTP request.'
   },
   servers: [{ url: '/api' }]
 });

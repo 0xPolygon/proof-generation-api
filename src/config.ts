@@ -12,8 +12,6 @@ const config = {
       sepoliaRPC: env.SEPOLIA_RPC,
       maticRPC: env.MATIC_RPC,
       amoyRPC: env.AMOY_RPC,
-      zkEVMMainnetURL: env.ZKEVM_MAINNET_URL,
-      zkEVMTestnetURL: env.ZKEVM_TESTNET_URL,
       xERPCSecretToken: env.ERPC_SECRET_TOKEN
     };
   },

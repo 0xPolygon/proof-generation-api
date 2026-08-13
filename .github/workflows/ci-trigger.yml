@@ -16,7 +16,5 @@ jobs:
       ETHEREUM_RPC: '["https://rpc.polygon.tools/internal/evm/1?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
       MATIC_RPC: '["https://rpc.polygon.tools/internal/evm/137?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
       SEPOLIA_RPC: '["https://rpc.polygon.tools/internal/evm/11155111?token=${{ secrets.ERPC_CLIENT_TOKEN }}"]'
-      ZKEVM_MAINNET_URL: https://bridge-api.zkevm-rpc.com
-      ZKEVM_TESTNET_URL: https://bridge-api.cardona.zkevm-rpc.com
     steps:
       - uses: 0xPolygon/pipelines/.github/actions/ci@main

@@ -83,8 +83,6 @@ function buildEnv() {
       SEPOLIA_RPC: z.string().transform(parseRpcUrlArray),
       MATIC_RPC: z.string().transform(parseRpcUrlArray),
       AMOY_RPC: z.string().transform(parseRpcUrlArray),
-      ZKEVM_MAINNET_URL: z.string(),
-      ZKEVM_TESTNET_URL: z.string(),
       ERPC_SECRET_TOKEN: z.string().optional(),
       SENTRY_DSN: z.string().optional(),
       PRETTY_LOGS: BooleanOrBooleanStringSchema.default(false)
