@@ -5,6 +5,8 @@ import type { IPOSClientConfig } from '@maticnetwork/maticjs';
 import maticJs from '@maticnetwork/maticjs';
 import maticJs_Ethers from '@maticnetwork/maticjs-ethers';
 
+import type { Logger } from './logger.ts';
+
 import { config } from './config.ts';
 
 const { Converter, POSClient, use } = maticJs; // default export :(
@@ -91,3 +93,61 @@ export const initMatic = (
 export const convert = async (value: any) => {
   return Converter.toHex(value);
 };
+
+const WARM_UP_TIMEOUT_MS = 5_000;
+
+function withTimeout<T>({ ms, promise }: { ms: number; promise: Promise<T> }): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timed out after ${ms}ms`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err: unknown) => {
+        clearTimeout(timer);
+        reject(err instanceof Error ? err : new Error(String(err)));
+      }
+    );
+  });
+}
+
+export async function warmMaticClients(logger: Logger): Promise<void> {
+  // Mirrors src/routes/v1.ts's networkDetails map, at the RPC index requests
+  // start from (config.mainnetRpcIndex / config.testnetRpcIndex).
+  const warmUpTuples = [
+    {
+      ethereumRPC: config.app.ethereumRPC[config.mainnetRpcIndex],
+      isMainnet: true,
+      maticRPC: config.app.maticRPC[config.mainnetRpcIndex],
+      version: 'v1'
+    },
+    {
+      ethereumRPC: config.app.sepoliaRPC[config.testnetRpcIndex],
+      isMainnet: false,
+      maticRPC: config.app.amoyRPC[config.testnetRpcIndex],
+      version: 'amoy'
+    }
+  ];
+
+  const results = await Promise.allSettled(
+    warmUpTuples.map(({ ethereumRPC, isMainnet, maticRPC, version }) => {
+      if (!maticRPC || !ethereumRPC) {
+        return Promise.reject(new Error(`no configured RPC endpoint for ${version}`));
+      }
+      return withTimeout({
+        ms: WARM_UP_TIMEOUT_MS,
+        promise: initMatic(isMainnet, version, maticRPC, ethereumRPC)
+      });
+    })
+  );
+
+  results.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      logger.warn(
+        { err: result.reason, version: warmUpTuples[i]?.version },
+        'RPC provider warm-up failed; will retry at request time'
+      );
+    }
+  });
+}

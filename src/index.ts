@@ -9,6 +9,7 @@ import { HTTPError } from '@polygonlabs/verror';
 
 import type { Logger } from './logger.ts';
 
+import { warmMaticClients } from './maticClient.ts';
 import { createIndexRouter } from './routes/index.ts';
 
 // Attach a per-request child logger to req.log so every log entry for a
@@ -68,6 +69,20 @@ export async function startApiServer({
   app: Express;
   logger: Logger;
 }): Promise<void> {
+  // Warm the RPC providers before opening the listen socket: /health-check has no
+  // RPC dependency and is the sole readiness signal the shared docker-test composite
+  // waits on, so without this a POSClient's maiden detectNetwork() call — a cold
+  // DNS+TLS+RPC round trip in a fresh container network namespace — can lose the
+  // race against the steady-state 2-attempt retry budget on a real request.
+  try {
+    await warmMaticClients(logger);
+  } catch (err: unknown) {
+    logger.warn(
+      { err: err instanceof Error ? err : new Error(String(err)) },
+      'RPC provider warm-up failed; continuing startup'
+    );
+  }
+
   // Bubble errors calling `listen()` up to callers so they get an async stack trace
   await new Promise((resolve, reject) => {
     app.listen(port).once('listening', resolve).once('error', reject);
