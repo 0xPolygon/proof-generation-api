@@ -30,7 +30,16 @@ use(Web3ClientPlugin);
 // The cache stores Promises so that concurrent requests for the same key share
 // a single in-flight initialisation rather than racing to create duplicates.
 // A failed initialisation is evicted from the cache so the next request retries.
+// warmMaticClients (below) evicts the same way when a resolved client's first
+// real round-trip fails, for the same reason.
 const clientCache = new Map<string, Promise<InstanceType<typeof POSClient>>>();
+
+const getCacheKey = (
+  isMainnet: boolean,
+  version: string,
+  maticRPC: string,
+  ethereumRPC: string
+): string => `${isMainnet ? 'mainnet' : 'testnet'}:${version}:${maticRPC}:${ethereumRPC}`;
 
 export const initMatic = (
   isMainnet: boolean,
@@ -38,7 +47,7 @@ export const initMatic = (
   maticRPC: string,
   ethereumRPC: string
 ): Promise<InstanceType<typeof POSClient>> => {
-  const cacheKey = `${isMainnet ? 'mainnet' : 'testnet'}:${version}:${maticRPC}:${ethereumRPC}`;
+  const cacheKey = getCacheKey(isMainnet, version, maticRPC, ethereumRPC);
 
   const cached = clientCache.get(cacheKey);
   if (cached) return cached;
@@ -94,7 +103,15 @@ export const convert = async (value: any) => {
   return Converter.toHex(value);
 };
 
-const WARM_UP_TIMEOUT_MS = 5_000;
+// Bounds the whole warm-up-plus-probe sequence for one tuple, including the
+// retry backoffs below. ethers v5's StaticJsonRpcProvider only *schedules*
+// detectNetwork() via setTimeout(0) in its constructor — awaiting init()
+// resolving proves detection STARTED, not that it SUCCEEDED, so a probe is
+// needed. Raised from the original 5s to give 3 backed-off probe attempts
+// room, while staying well under boot-liveness budgets.
+const WARM_UP_TIMEOUT_MS = 8_000;
+const WARM_UP_PROBE_ATTEMPTS = 3;
+const WARM_UP_PROBE_BACKOFF_MS = 500;
 
 function withTimeout<T>({ ms, promise }: { ms: number; promise: Promise<T> }): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -110,6 +127,51 @@ function withTimeout<T>({ ms, promise }: { ms: number; promise: Promise<T> }): P
       }
     );
   });
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Drives a real, awaited round-trip through the same POSClient instance the
+// request handlers reuse from clientCache, so the warm-up proves detectNetwork
+// actually succeeded rather than merely started. Uses exitUtil.rootChain's
+// getLastChildBlock() — the same cheap root-chain read isBlockIncluded() makes
+// on the request path — as the probe.
+//
+// A resolved init() with a subsequently-failing probe means the client's
+// underlying provider may be sitting on a bad state from the race described
+// above; re-probing the same instance risks repeating that race, so each
+// retry evicts the cached client first and re-inits from scratch.
+async function warmOneClient({
+  ethereumRPC,
+  isMainnet,
+  maticRPC,
+  version
+}: {
+  ethereumRPC: string;
+  isMainnet: boolean;
+  maticRPC: string;
+  version: string;
+}): Promise<void> {
+  let lastErr: unknown;
+
+  for (let attempt = 0; attempt < WARM_UP_PROBE_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      clientCache.delete(getCacheKey(isMainnet, version, maticRPC, ethereumRPC));
+      await delay(WARM_UP_PROBE_BACKOFF_MS);
+    }
+
+    try {
+      const client = await initMatic(isMainnet, version, maticRPC, ethereumRPC);
+      await client.exitUtil.rootChain.getLastChildBlock();
+      return;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 export async function warmMaticClients(logger: Logger): Promise<void> {
@@ -135,9 +197,15 @@ export async function warmMaticClients(logger: Logger): Promise<void> {
       if (!maticRPC || !ethereumRPC) {
         return Promise.reject(new Error(`no configured RPC endpoint for ${version}`));
       }
+      const startedAt = Date.now();
       return withTimeout({
         ms: WARM_UP_TIMEOUT_MS,
-        promise: initMatic(isMainnet, version, maticRPC, ethereumRPC)
+        promise: warmOneClient({ ethereumRPC, isMainnet, maticRPC, version }).then(() => {
+          logger.debug(
+            { durationMs: Date.now() - startedAt, version },
+            'RPC provider warm-up probe succeeded'
+          );
+        })
       });
     })
   );
