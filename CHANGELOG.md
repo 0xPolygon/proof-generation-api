@@ -1,5 +1,11 @@
 # proof-generation-api
 
+## 2.0.1
+
+### Patch Changes
+
+- [#93](https://github.com/0xPolygon/proof-generation-api/pull/93) [`46e34fa`](https://github.com/0xPolygon/proof-generation-api/commit/46e34fae091213503156cf6219118c694d5d0ce2) Thanks [@shan8851](https://github.com/shan8851)! - Rebuild on Node 24.22.1, whose bundled trust store rejects certificate chains signed by the compromised eMudhra intermediate CA keys. No application code changes.
+
 ## 2.0.0
 
 ### Major Changes
@@ -7,7 +13,6 @@
 - [#89](https://github.com/0xPolygon/proof-generation-api/pull/89) [`58a7e8b`](https://github.com/0xPolygon/proof-generation-api/commit/58a7e8bd4c7212544177f2c1e41ef6e530604c88) Thanks [@shan8851](https://github.com/shan8851)! - Remove the zkEVM proof-generation endpoints (`/zkevm/mainnet` and `/zkevm/testnet` routes) — the underlying chains are sunset and their infrastructure no longer answers. PoS (v1) endpoints are unchanged.
 
   ## Breaking changes
-
   - Removed `GET /api/zkevm/{network}/bridge`
   - Removed `GET /api/zkevm/{network}/merkle-proof`
   - Removed the `ZKEVM_MAINNET_URL` and `ZKEVM_TESTNET_URL` environment variables — they are no longer recognized configuration
