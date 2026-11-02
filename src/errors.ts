@@ -23,3 +23,11 @@ export class TxNotCheckpointedError extends HTTPError {
   override readonly name = 'TxNotCheckpointedError' as const;
   override readonly statusCode = 404 as const;
 }
+
+// Retries were exhausted on failures that are not about the request itself
+// (RPC timeouts, network or server errors), so the client should see a 5xx rather
+// than a misleading "not found".
+export class UpstreamRpcError extends HTTPError {
+  override readonly name = 'UpstreamRpcError' as const;
+  override readonly statusCode = 502 as const;
+}

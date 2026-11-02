@@ -7,6 +7,10 @@ import maticJs_Ethers from '@maticnetwork/maticjs-ethers';
 
 import { config } from './config.ts';
 
+// Bounds parallel getTransactionReceipt calls maticjs fires per exit-payload build;
+// the default is unbounded, so one large block can exhaust the RPC and the process.
+const RECEIPT_REQUEST_CONCURRENCY = 10;
+
 const { Converter, POSClient, use } = maticJs; // default export :(
 
 // eslint-disable-next-line import-x/no-named-as-default-member
@@ -72,7 +76,8 @@ export const initMatic = (
         from: '0x54d03EC0C462e9a01F77579C090cdE0FC2617817'
       }
     },
-    rootChainDefaultBlock: 'latest'
+    rootChainDefaultBlock: 'latest',
+    requestConcurrency: RECEIPT_REQUEST_CONCURRENCY
   };
 
   const posClient = new POSClient();

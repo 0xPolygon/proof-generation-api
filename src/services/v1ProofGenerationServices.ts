@@ -3,7 +3,13 @@ import { HTTPError } from '@polygonlabs/verror';
 import type { Logger } from '../logger.ts';
 
 import { config } from '../config.ts';
-import { BlockNotIncludedError, IncorrectTxError, TxNotCheckpointedError } from '../errors.ts';
+import {
+  BlockNotIncludedError,
+  IncorrectTxError,
+  TxNotCheckpointedError,
+  UpstreamRpcError
+} from '../errors.ts';
+import { assertExitLogPresent, toDeterministicError } from '../exitLogs.ts';
 import { convert, initMatic } from '../maticClient.ts';
 
 // Returns only the protocol+host of an RPC URL so that secret tokens in query
@@ -224,6 +230,13 @@ export async function generateExitPayload(
         }
       }
 
+      // Cheap rejection before the expensive proof build: maticjs only checks the
+      // log after fetching every receipt in the block and building both proofs.
+      const receipt = await maticClient.client.child.getTransactionReceipt(burnTxHash);
+      if (receipt?.logs) {
+        assertExitLogPresent({ logs: receipt.logs, eventSignature, tokenIndex });
+      }
+
       try {
         result = await maticClient.exitUtil.buildPayloadForExit(
           burnTxHash,
@@ -233,17 +246,16 @@ export async function generateExitPayload(
         );
       } catch (buildError: unknown) {
         const err = buildError instanceof Error ? buildError : new Error(String(buildError));
-        if (err.message === 'Index is greater than the number of tokens in this transaction') {
-          // BlockNotIncludedError extends HTTPError, which is W-by-default (verror
-          // 1.1+): the outer message stays clean for the HTTP response automatically;
-          // the original maticjs error is preserved in the cause chain for the logger
-          // to unwrap.
-          throw new BlockNotIncludedError('Token index out of range for this transaction', {
+        // BlockNotIncludedError extends HTTPError, which is W-by-default (verror
+        // 1.1+): the outer message stays clean for the HTTP response automatically;
+        // the original maticjs error is preserved in the cause chain for the logger
+        // to unwrap.
+        const deterministic = toDeterministicError(err);
+        if (deterministic) throw deterministic;
+        if (i === maxRetries - 1) {
+          throw new UpstreamRpcError('Exit payload generation failed after retries', {
             cause: err
           });
-        }
-        if (i === maxRetries - 1) {
-          throw new BlockNotIncludedError('Event Signature log not found in tx receipt');
         }
         throw err;
       }
@@ -317,6 +329,11 @@ export async function generateAllExitPayloads(
         throw new TxNotCheckpointedError('Burn transaction has not been checkpointed yet');
       }
 
+      const receipt = await maticClient.client.child.getTransactionReceipt(burnTxHash);
+      if (receipt?.logs) {
+        assertExitLogPresent({ logs: receipt.logs, eventSignature });
+      }
+
       try {
         result = await maticClient.exitUtil.buildMultiplePayloadsForExit(
           burnTxHash,
@@ -325,8 +342,12 @@ export async function generateAllExitPayloads(
         );
       } catch (buildError: unknown) {
         const err = buildError instanceof Error ? buildError : new Error(String(buildError));
+        const deterministic = toDeterministicError(err);
+        if (deterministic) throw deterministic;
         if (i === maxRetries - 1) {
-          throw new BlockNotIncludedError('Event Signature log not found in tx receipt');
+          throw new UpstreamRpcError('Exit payload generation failed after retries', {
+            cause: err
+          });
         }
         // Rethrow to the outer retry loop, which logs and retries — no need to
         // log here too.
