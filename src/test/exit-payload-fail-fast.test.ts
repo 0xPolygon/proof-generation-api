@@ -95,6 +95,24 @@ describe('exit payload fail-fast', () => {
     expect(mocks.buildPayloadForExit).toHaveBeenCalledTimes(2 * mocks.RPC_COUNT);
   });
 
+  it('stops retrying once the retry time budget is spent', async () => {
+    // Each failed attempt "takes" 15s, so the 20s budget is spent after two attempts.
+    let now = Date.now();
+    const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+    mocks.buildPayloadForExit.mockImplementation(() => {
+      now += 15_000;
+      return Promise.reject(new Error('timeout'));
+    });
+
+    const err = await generateExitPayload(TX, TRANSFER_SIG, 0, true, 'v1', logger).catch(
+      (e: unknown) => e
+    );
+    clock.mockRestore();
+
+    expect(err).instanceOf(UpstreamRpcError);
+    expect(mocks.buildPayloadForExit).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects a receipt with no matching log without building the proof', async () => {
     mocks.getTransactionReceipt.mockResolvedValue({ logs: [unrelatedLog] });
 

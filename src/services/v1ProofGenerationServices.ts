@@ -22,6 +22,15 @@ function rpcOrigin(url: string): string {
   }
 }
 
+// Health checks and most clients give up at ~30s, so once this budget is spent no new
+// attempt is started: the caller gets a prompt failure instead of minutes of retries.
+const RETRY_BUDGET_MS = 20_000;
+
+const createIsLastAttempt = (maxRetries: number) => {
+  const deadline = Date.now() + RETRY_BUDGET_MS;
+  return (attempt: number) => attempt === maxRetries - 1 || Date.now() >= deadline;
+};
+
 const getVersionDetails = (version: string) => {
   // RPC lengths read here (not at module scope) so env validation is deferred
   // until the first actual request when running against TEST_BASE_URL.
@@ -62,6 +71,7 @@ export async function isBlockIncluded(
   logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const isLastAttempt = createIsLastAttempt(maxRetries);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
   let result;
@@ -112,7 +122,7 @@ export async function isBlockIncluded(
 
       break;
     } catch (error: unknown) {
-      if (error instanceof BlockNotIncludedError || i === maxRetries - 1) {
+      if (error instanceof BlockNotIncludedError || isLastAttempt(i)) {
         throw error;
       }
       const err = error instanceof Error ? error : new Error(String(error));
@@ -145,6 +155,7 @@ export async function fastMerkleProof(
   logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const isLastAttempt = createIsLastAttempt(maxRetries);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
   let proof;
@@ -163,7 +174,7 @@ export async function fastMerkleProof(
       proof = await maticClient.exitUtil.getBlockProof(number, { start, end });
       break;
     } catch (error: unknown) {
-      if (i === maxRetries - 1) {
+      if (isLastAttempt(i)) {
         throw error;
       }
       const err = error instanceof Error ? error : new Error(String(error));
@@ -196,6 +207,7 @@ export async function generateExitPayload(
   logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const isLastAttempt = createIsLastAttempt(maxRetries);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
   let result;
@@ -220,7 +232,7 @@ export async function generateExitPayload(
           const err =
             checkpointError instanceof Error ? checkpointError : new Error(String(checkpointError));
           logger.warn({ err, burnTxHash, network: version }, 'checkpoint status check failed');
-          if (i === maxRetries - 1) {
+          if (isLastAttempt(i)) {
             throw new IncorrectTxError('Incorrect burn transaction');
           }
           throw err;
@@ -252,7 +264,7 @@ export async function generateExitPayload(
         // to unwrap.
         const deterministic = toDeterministicError(err);
         if (deterministic) throw deterministic;
-        if (i === maxRetries - 1) {
+        if (isLastAttempt(i)) {
           throw new UpstreamRpcError('Exit payload generation failed after retries', {
             cause: err
           });
@@ -266,7 +278,7 @@ export async function generateExitPayload(
 
       break;
     } catch (error: unknown) {
-      if (error instanceof HTTPError || i === maxRetries - 1) {
+      if (error instanceof HTTPError || isLastAttempt(i)) {
         throw error;
       }
       const err = error instanceof Error ? error : new Error(String(error));
@@ -298,6 +310,7 @@ export async function generateAllExitPayloads(
   logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const isLastAttempt = createIsLastAttempt(maxRetries);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
   let result;
@@ -318,7 +331,7 @@ export async function generateAllExitPayloads(
       try {
         isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
       } catch (checkpointError: unknown) {
-        if (i === maxRetries - 1) {
+        if (isLastAttempt(i)) {
           throw new IncorrectTxError('Incorrect burn transaction');
         }
         throw checkpointError instanceof Error
@@ -344,7 +357,7 @@ export async function generateAllExitPayloads(
         const err = buildError instanceof Error ? buildError : new Error(String(buildError));
         const deterministic = toDeterministicError(err);
         if (deterministic) throw deterministic;
-        if (i === maxRetries - 1) {
+        if (isLastAttempt(i)) {
           throw new UpstreamRpcError('Exit payload generation failed after retries', {
             cause: err
           });
@@ -360,7 +373,7 @@ export async function generateAllExitPayloads(
 
       break;
     } catch (error: unknown) {
-      if (error instanceof HTTPError || i === maxRetries - 1) {
+      if (error instanceof HTTPError || isLastAttempt(i)) {
         throw error;
       }
       const err = error instanceof Error ? error : new Error(String(error));

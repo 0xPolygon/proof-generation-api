@@ -11,6 +11,10 @@ import { config } from './config.ts';
 // the default is unbounded, so one large block can exhaust the RPC and the process.
 const RECEIPT_REQUEST_CONCURRENCY = 10;
 
+// ethers v5 defaults to 120s per call, which lets a slow or overloaded provider hold a
+// request (and its sockets) for minutes; fail the call fast and move to the next provider.
+const RPC_TIMEOUT_MS = 10_000;
+
 const { Converter, POSClient, use } = maticJs; // default export :(
 
 // eslint-disable-next-line import-x/no-named-as-default-member
@@ -53,6 +57,7 @@ export const initMatic = (
     parent: {
       provider: new providers.StaticJsonRpcProvider({
         url: ethereumRPC,
+        timeout: RPC_TIMEOUT_MS,
         headers: {
           ...(config.app.xERPCSecretToken
             ? { 'X-ERPC-Secret-Token': config.app.xERPCSecretToken }
@@ -66,6 +71,7 @@ export const initMatic = (
     child: {
       provider: new providers.StaticJsonRpcProvider({
         url: maticRPC,
+        timeout: RPC_TIMEOUT_MS,
         headers: {
           ...(config.app.xERPCSecretToken
             ? { 'X-ERPC-Secret-Token': config.app.xERPCSecretToken }
