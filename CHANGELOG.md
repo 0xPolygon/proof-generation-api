@@ -1,5 +1,13 @@
 # proof-generation-api
 
+## 2.0.2
+
+### Patch Changes
+
+- [#95](https://github.com/0xPolygon/proof-generation-api/pull/95) [`83e3d51`](https://github.com/0xPolygon/proof-generation-api/commit/83e3d51593f140699eedb7a151b693a7ba2b8eaf) Thanks [@shan8851](https://github.com/shan8851)! - Return 404 immediately for exit-payload requests whose event log is not in the burn transaction receipt instead of retrying, report exhausted RPC failures as 5xx instead of a misleading 404, limit concurrent receipt fetches, and fail slow RPC calls after 10s with a 20s overall retry budget so requests no longer hang for minutes.
+
+  Also upgrades `@polygonlabs/logger` to 4.x and `@polygonlabs/verror` to 1.2.x, which redact RPC URLs from more error shapes before they reach logs.
+
 ## 2.0.1
 
 ### Patch Changes
@@ -13,7 +21,6 @@
 - [#89](https://github.com/0xPolygon/proof-generation-api/pull/89) [`58a7e8b`](https://github.com/0xPolygon/proof-generation-api/commit/58a7e8bd4c7212544177f2c1e41ef6e530604c88) Thanks [@shan8851](https://github.com/shan8851)! - Remove the zkEVM proof-generation endpoints (`/zkevm/mainnet` and `/zkevm/testnet` routes) — the underlying chains are sunset and their infrastructure no longer answers. PoS (v1) endpoints are unchanged.
 
   ## Breaking changes
-
   - Removed `GET /api/zkevm/{network}/bridge`
   - Removed `GET /api/zkevm/{network}/merkle-proof`
   - Removed the `ZKEVM_MAINNET_URL` and `ZKEVM_TESTNET_URL` environment variables — they are no longer recognized configuration
