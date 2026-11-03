@@ -154,4 +154,30 @@ describe('exit payload fail-fast', () => {
     expect(res).property('result', '0xpayload');
     expect(mocks.buildPayloadForExit).toHaveBeenCalledTimes(1);
   });
+
+  it('reports an exhausted receipt pre-check as 502, not a generic 500', async () => {
+    mocks.getTransactionReceipt.mockRejectedValue(new Error('timeout'));
+
+    const err = await generateAllExitPayloads(TX, TRANSFER_SIG, true, 'v1', logger).catch(
+      (e: unknown) => e
+    );
+
+    expect(err).instanceOf(UpstreamRpcError);
+    expect(mocks.getTransactionReceipt).toHaveBeenCalledTimes(2 * mocks.RPC_COUNT);
+  });
+
+  it('passes a mixed-case signature to maticjs lowercased, so both agree on the burn log', async () => {
+    mocks.buildPayloadForExit.mockResolvedValue('0xpayload');
+
+    await generateExitPayload(
+      TX,
+      TRANSFER_SIG.toUpperCase().replace('0X', '0x'),
+      0,
+      true,
+      'v1',
+      logger
+    );
+
+    expect(mocks.buildPayloadForExit).toHaveBeenCalledWith(TX, TRANSFER_SIG, false, 0);
+  });
 });
