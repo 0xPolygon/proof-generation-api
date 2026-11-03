@@ -9,6 +9,7 @@ import { HTTPError } from '@polygonlabs/verror';
 
 import type { Logger } from './logger.ts';
 
+import { ServerBusyError } from './errors.ts';
 import { createIndexRouter } from './routes/index.ts';
 
 // Attach a per-request child logger to req.log so every log entry for a
@@ -42,7 +43,11 @@ export function getExpressApp(logger: Logger): Express {
   // the log entry; the client receives only the immediate error message.
   app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof HTTPError) {
-      if (err.statusCode >= 500) {
+      // Shed load silently: a burst of rejections would flood logs and Sentry, and the
+      // 503s are already visible in request metrics.
+      if (err instanceof ServerBusyError) {
+        // no log
+      } else if (err.statusCode >= 500) {
         req.log.error({ err });
       } else {
         req.log.debug({ err });

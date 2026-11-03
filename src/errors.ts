@@ -31,3 +31,10 @@ export class UpstreamRpcError extends HTTPError {
   override readonly name = 'UpstreamRpcError' as const;
   override readonly statusCode = 502 as const;
 }
+
+// Thrown by the in-flight cap on exit-payload routes. Clients should retry after the
+// Retry-After delay; the central error handler does not log it (see src/index.ts).
+export class ServerBusyError extends HTTPError {
+  override readonly name = 'ServerBusyError' as const;
+  override readonly statusCode = 503 as const;
+}
