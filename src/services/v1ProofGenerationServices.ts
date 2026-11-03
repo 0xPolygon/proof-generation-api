@@ -3,7 +3,13 @@ import { HTTPError } from '@polygonlabs/verror';
 import type { Logger } from '../logger.ts';
 
 import { config } from '../config.ts';
-import { BlockNotIncludedError, IncorrectTxError, TxNotCheckpointedError } from '../errors.ts';
+import {
+  BlockNotIncludedError,
+  IncorrectTxError,
+  TxNotCheckpointedError,
+  UpstreamRpcError
+} from '../errors.ts';
+import { assertExitLogPresent, toDeterministicError } from '../exitLogs.ts';
 import { convert, initMatic } from '../maticClient.ts';
 
 // Returns only the protocol+host of an RPC URL so that secret tokens in query
@@ -15,6 +21,15 @@ function rpcOrigin(url: string): string {
     return '[unparseable URL]';
   }
 }
+
+// Health checks and most clients give up at ~30s, so once this budget is spent no new
+// attempt is started: the caller gets a prompt failure instead of minutes of retries.
+const RETRY_BUDGET_MS = 20_000;
+
+const createIsLastAttempt = (maxRetries: number) => {
+  const deadline = Date.now() + RETRY_BUDGET_MS;
+  return (attempt: number) => attempt === maxRetries - 1 || Date.now() >= deadline;
+};
 
 const getVersionDetails = (version: string) => {
   // RPC lengths read here (not at module scope) so env validation is deferred
@@ -56,6 +71,7 @@ export async function isBlockIncluded(
   logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const isLastAttempt = createIsLastAttempt(maxRetries);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
   let result;
@@ -106,7 +122,7 @@ export async function isBlockIncluded(
 
       break;
     } catch (error: unknown) {
-      if (error instanceof BlockNotIncludedError || i === maxRetries - 1) {
+      if (error instanceof BlockNotIncludedError || isLastAttempt(i)) {
         throw error;
       }
       const err = error instanceof Error ? error : new Error(String(error));
@@ -139,6 +155,7 @@ export async function fastMerkleProof(
   logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const isLastAttempt = createIsLastAttempt(maxRetries);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
 
   let proof;
@@ -157,7 +174,7 @@ export async function fastMerkleProof(
       proof = await maticClient.exitUtil.getBlockProof(number, { start, end });
       break;
     } catch (error: unknown) {
-      if (i === maxRetries - 1) {
+      if (isLastAttempt(i)) {
         throw error;
       }
       const err = error instanceof Error ? error : new Error(String(error));
@@ -190,7 +207,11 @@ export async function generateExitPayload(
   logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const isLastAttempt = createIsLastAttempt(maxRetries);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
+  // maticjs matches its burn-event special cases case-sensitively; normalising here keeps
+  // the pre-check and the SDK agreeing on which log a mixed-case signature selects.
+  const sig = eventSignature.toLowerCase();
 
   let result;
   let isCheckpointed;
@@ -213,8 +234,7 @@ export async function generateExitPayload(
         } catch (checkpointError: unknown) {
           const err =
             checkpointError instanceof Error ? checkpointError : new Error(String(checkpointError));
-          logger.warn({ err, burnTxHash, network: version }, 'checkpoint status check failed');
-          if (i === maxRetries - 1) {
+          if (isLastAttempt(i)) {
             throw new IncorrectTxError('Incorrect burn transaction');
           }
           throw err;
@@ -224,27 +244,23 @@ export async function generateExitPayload(
         }
       }
 
+      // Cheap rejection before the expensive proof build: maticjs only checks the
+      // log after fetching every receipt in the block and building both proofs.
+      const receipt = await maticClient.client.child.getTransactionReceipt(burnTxHash);
+      if (receipt?.logs) {
+        assertExitLogPresent({ logs: receipt.logs, eventSignature: sig, tokenIndex });
+      }
+
       try {
-        result = await maticClient.exitUtil.buildPayloadForExit(
-          burnTxHash,
-          eventSignature,
-          false,
-          tokenIndex
-        );
+        result = await maticClient.exitUtil.buildPayloadForExit(burnTxHash, sig, false, tokenIndex);
       } catch (buildError: unknown) {
         const err = buildError instanceof Error ? buildError : new Error(String(buildError));
-        if (err.message === 'Index is greater than the number of tokens in this transaction') {
-          // BlockNotIncludedError extends HTTPError, which is W-by-default (verror
-          // 1.1+): the outer message stays clean for the HTTP response automatically;
-          // the original maticjs error is preserved in the cause chain for the logger
-          // to unwrap.
-          throw new BlockNotIncludedError('Token index out of range for this transaction', {
-            cause: err
-          });
-        }
-        if (i === maxRetries - 1) {
-          throw new BlockNotIncludedError('Event Signature log not found in tx receipt');
-        }
+        // BlockNotIncludedError extends HTTPError, which is W-by-default (verror
+        // 1.1+): the outer message stays clean for the HTTP response automatically;
+        // the original maticjs error is preserved in the cause chain for the logger
+        // to unwrap.
+        const deterministic = toDeterministicError(err);
+        if (deterministic) throw deterministic;
         throw err;
       }
 
@@ -254,10 +270,11 @@ export async function generateExitPayload(
 
       break;
     } catch (error: unknown) {
-      if (error instanceof HTTPError || i === maxRetries - 1) {
-        throw error;
-      }
+      if (error instanceof HTTPError) throw error;
       const err = error instanceof Error ? error : new Error(String(error));
+      if (isLastAttempt(i)) {
+        throw new UpstreamRpcError('Exit payload generation failed after retries', { cause: err });
+      }
       const maticjsErr = error as Record<string, unknown>;
       logger.warn(
         {
@@ -286,7 +303,10 @@ export async function generateAllExitPayloads(
   logger: Logger
 ) {
   const { ethereumRPC, maticRPC, maxRetries, rpcLength } = getVersionDetails(version);
+  const isLastAttempt = createIsLastAttempt(maxRetries);
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
+  // See generateExitPayload: keeps the pre-check and maticjs on the same log selection.
+  const sig = eventSignature.toLowerCase();
 
   let result;
   let isCheckpointed;
@@ -306,7 +326,7 @@ export async function generateAllExitPayloads(
       try {
         isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
       } catch (checkpointError: unknown) {
-        if (i === maxRetries - 1) {
+        if (isLastAttempt(i)) {
           throw new IncorrectTxError('Incorrect burn transaction');
         }
         throw checkpointError instanceof Error
@@ -317,17 +337,17 @@ export async function generateAllExitPayloads(
         throw new TxNotCheckpointedError('Burn transaction has not been checkpointed yet');
       }
 
+      const receipt = await maticClient.client.child.getTransactionReceipt(burnTxHash);
+      if (receipt?.logs) {
+        assertExitLogPresent({ logs: receipt.logs, eventSignature: sig });
+      }
+
       try {
-        result = await maticClient.exitUtil.buildMultiplePayloadsForExit(
-          burnTxHash,
-          eventSignature,
-          false
-        );
+        result = await maticClient.exitUtil.buildMultiplePayloadsForExit(burnTxHash, sig, false);
       } catch (buildError: unknown) {
         const err = buildError instanceof Error ? buildError : new Error(String(buildError));
-        if (i === maxRetries - 1) {
-          throw new BlockNotIncludedError('Event Signature log not found in tx receipt');
-        }
+        const deterministic = toDeterministicError(err);
+        if (deterministic) throw deterministic;
         // Rethrow to the outer retry loop, which logs and retries — no need to
         // log here too.
         throw err;
@@ -339,10 +359,11 @@ export async function generateAllExitPayloads(
 
       break;
     } catch (error: unknown) {
-      if (error instanceof HTTPError || i === maxRetries - 1) {
-        throw error;
-      }
+      if (error instanceof HTTPError) throw error;
       const err = error instanceof Error ? error : new Error(String(error));
+      if (isLastAttempt(i)) {
+        throw new UpstreamRpcError('Exit payload generation failed after retries', { cause: err });
+      }
       const maticjsErr = error as Record<string, unknown>;
       logger.warn(
         {
