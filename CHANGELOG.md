@@ -1,5 +1,11 @@
 # proof-generation-api
 
+## 2.0.3
+
+### Patch Changes
+
+- [#97](https://github.com/0xPolygon/proof-generation-api/pull/97) [`703e0b7`](https://github.com/0xPolygon/proof-generation-api/commit/703e0b771251146c6f0ffd96d0e87aef88dc607d) Thanks [@shan8851](https://github.com/shan8851)! - Reject exit-payload requests with 503 and a `Retry-After` header when a server is already handling too many, so other endpoints stay responsive under load.
+
 ## 2.0.2
 
 ### Patch Changes
@@ -21,7 +27,6 @@
 - [#89](https://github.com/0xPolygon/proof-generation-api/pull/89) [`58a7e8b`](https://github.com/0xPolygon/proof-generation-api/commit/58a7e8bd4c7212544177f2c1e41ef6e530604c88) Thanks [@shan8851](https://github.com/shan8851)! - Remove the zkEVM proof-generation endpoints (`/zkevm/mainnet` and `/zkevm/testnet` routes) — the underlying chains are sunset and their infrastructure no longer answers. PoS (v1) endpoints are unchanged.
 
   ## Breaking changes
-
   - Removed `GET /api/zkevm/{network}/bridge`
   - Removed `GET /api/zkevm/{network}/merkle-proof`
   - Removed the `ZKEVM_MAINNET_URL` and `ZKEVM_TESTNET_URL` environment variables — they are no longer recognized configuration
