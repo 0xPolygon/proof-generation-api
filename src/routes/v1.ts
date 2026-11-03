@@ -4,6 +4,7 @@ import { Router } from 'express';
 
 import { BadRequest, GeneralError } from '@polygonlabs/verror';
 
+import { capInFlightExitPayloads } from '../inFlightCap.ts';
 import {
   AllExitPayloadsSchema,
   BlockIncludedSchema,
@@ -99,6 +100,9 @@ export function createV1Router(): Router {
 
     res.json(responseObj);
   });
+
+  // Only the routes that build exit payloads are capped; the cheap routes stay uncapped.
+  router.use(['/:network/exit-payload', '/:network/all-exit-payloads'], capInFlightExitPayloads);
 
   router.get('/:network/exit-payload/:burnTxHash', async (req: Request, res: Response) => {
     const result = ExitPayloadSchema.safeParse({ params: req.params, query: req.query });
