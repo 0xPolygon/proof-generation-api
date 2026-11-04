@@ -1,3 +1,9 @@
+import type { BigNumber } from 'ethers';
+
+import { Contract } from 'ethers';
+
+import { POSBridgeError } from '@polygonlabs/maticjs';
+import { RootChainABI } from '@polygonlabs/maticjs/abi';
 import { HTTPError } from '@polygonlabs/verror';
 
 import type { Logger } from '../logger.ts';
@@ -10,7 +16,7 @@ import {
   UpstreamRpcError
 } from '../errors.ts';
 import { assertExitLogPresent, toDeterministicError } from '../exitLogs.ts';
-import { convert, initMatic } from '../maticClient.ts';
+import { initMatic } from '../maticClient.ts';
 
 // Returns only the protocol+host of an RPC URL so that secret tokens in query
 // params are never written to logs.
@@ -29,6 +35,30 @@ const RETRY_BUDGET_MS = 20_000;
 const createIsLastAttempt = (maxRetries: number) => {
   const deadline = Date.now() + RETRY_BUDGET_MS;
   return (attempt: number) => attempt === maxRetries - 1 || Date.now() >= deadline;
+};
+
+// RootChain.headerBlocks(uint256) as ethers v5 decodes it. The response forwards these
+// fields as-is, so the BigNumbers serialise to the same `{ type: 'BigNumber', hex }`
+// JSON the API has always returned.
+interface HeaderBlock {
+  start: BigNumber;
+  end: BigNumber;
+  proposer: string;
+  root: string;
+  createdAt: BigNumber;
+}
+
+// POSBridgeError carries a stable `code` plus the legacy 3.x `type` string. Raw
+// ethers failures pass through the SDK's read path unwrapped and carry their own
+// string `code` (SERVER_ERROR, TIMEOUT, CALL_EXCEPTION) — the bulk of retry warnings
+// in prod — so keep logging that too.
+const sdkErrorFields = (error: unknown) => {
+  if (error instanceof POSBridgeError) return { errorType: error.type, errorCode: error.code };
+  const errorCode =
+    typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+      ? error.code
+      : undefined;
+  return { errorType: undefined, errorCode };
 };
 
 const getVersionDetails = (version: string) => {
@@ -86,25 +116,26 @@ export async function isBlockIncluded(
     }
 
     try {
-      const rootChain = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl).then(
-        (maticClient: any) => {
-          return maticClient.exitUtil.rootChain;
-        }
+      const { pos, parentProvider } = await initMatic(
+        isMainnet,
+        version,
+        maticRPCUrl,
+        ethereumRPCUrl
       );
 
-      const lastChildBlock = await rootChain.getLastChildBlock();
-      if (parseInt(lastChildBlock) >= parseInt(blockNumber)) {
-        const headerBlockNumber = await rootChain
-          .findRootBlockFromChild(blockNumber)
-          .then((res: any) => {
-            return convert(res);
-          });
+      const lastChildBlock = await pos.rootChain.getLastChildBlock();
+      if (lastChildBlock >= BigInt(blockNumber)) {
+        const headerSlot = await pos.rootChain.findRootBlockFromChild(BigInt(blockNumber));
+        const headerBlockNumber = '0x' + headerSlot.toString(16);
 
-        const headerBlock: any = await rootChain
-          .method('headerBlocks', headerBlockNumber)
-          .then((meth: any) => {
-            return meth.read();
-          });
+        // The SDK has no public headerBlocks read, so call the RootChain contract
+        // directly; ethers v5 keeps the BigNumber fields the response has always carried.
+        const { RootChain } = await pos.getAddresses();
+        const headerBlock: HeaderBlock = await new Contract(
+          RootChain,
+          RootChainABI,
+          parentProvider
+        )['headerBlocks'](headerSlot);
 
         result = {
           headerBlockNumber,
@@ -126,7 +157,6 @@ export async function isBlockIncluded(
         throw error;
       }
       const err = error instanceof Error ? error : new Error(String(error));
-      const maticjsErr = error as Record<string, unknown>;
       logger.warn(
         {
           err,
@@ -136,8 +166,7 @@ export async function isBlockIncluded(
           ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
           attempt: i + 1,
           maxRetries,
-          errorEvent: maticjsErr['event'],
-          errorCode: maticjsErr['code']
+          ...sdkErrorFields(error)
         },
         'RPC attempt failed, retrying'
       );
@@ -170,15 +199,14 @@ export async function fastMerkleProof(
     }
 
     try {
-      const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
-      proof = await maticClient.exitUtil.getBlockProof(number, { start, end });
+      const { pos } = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
+      proof = await pos.getBlockProof(number, { start: Number(start), end: Number(end) });
       break;
     } catch (error: unknown) {
       if (isLastAttempt(i)) {
         throw error;
       }
       const err = error instanceof Error ? error : new Error(String(error));
-      const maticjsErr = error as Record<string, unknown>;
       logger.warn(
         {
           err,
@@ -188,8 +216,7 @@ export async function fastMerkleProof(
           ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
           attempt: i + 1,
           maxRetries,
-          errorEvent: maticjsErr['event'],
-          errorCode: maticjsErr['code']
+          ...sdkErrorFields(error)
         },
         'RPC attempt failed, retrying'
       );
@@ -226,11 +253,16 @@ export async function generateExitPayload(
     }
 
     try {
-      const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
+      const { pos, childProvider } = await initMatic(
+        isMainnet,
+        version,
+        maticRPCUrl,
+        ethereumRPCUrl
+      );
 
       if (!isCheckpointed) {
         try {
-          isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
+          isCheckpointed = await pos.isCheckpointed(burnTxHash);
         } catch (checkpointError: unknown) {
           const err =
             checkpointError instanceof Error ? checkpointError : new Error(String(checkpointError));
@@ -246,13 +278,13 @@ export async function generateExitPayload(
 
       // Cheap rejection before the expensive proof build: maticjs only checks the
       // log after fetching every receipt in the block and building both proofs.
-      const receipt = await maticClient.client.child.getTransactionReceipt(burnTxHash);
+      const receipt = await childProvider.getTransactionReceipt(burnTxHash);
       if (receipt?.logs) {
         assertExitLogPresent({ logs: receipt.logs, eventSignature: sig, tokenIndex });
       }
 
       try {
-        result = await maticClient.exitUtil.buildPayloadForExit(burnTxHash, sig, false, tokenIndex);
+        result = await pos.buildExitPayloadOnIndex(burnTxHash, sig, tokenIndex);
       } catch (buildError: unknown) {
         const err = buildError instanceof Error ? buildError : new Error(String(buildError));
         // BlockNotIncludedError extends HTTPError, which is W-by-default (verror
@@ -265,7 +297,7 @@ export async function generateExitPayload(
       }
 
       if (!result) {
-        throw new Error('buildPayloadForExit returned no result');
+        throw new Error('buildExitPayloadOnIndex returned no result');
       }
 
       break;
@@ -275,7 +307,6 @@ export async function generateExitPayload(
       if (isLastAttempt(i)) {
         throw new UpstreamRpcError('Exit payload generation failed after retries', { cause: err });
       }
-      const maticjsErr = error as Record<string, unknown>;
       logger.warn(
         {
           err,
@@ -285,8 +316,7 @@ export async function generateExitPayload(
           ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
           attempt: i + 1,
           maxRetries,
-          errorEvent: maticjsErr['event'],
-          errorCode: maticjsErr['code']
+          ...sdkErrorFields(error)
         },
         'RPC attempt failed, retrying'
       );
@@ -321,10 +351,15 @@ export async function generateAllExitPayloads(
     }
 
     try {
-      const maticClient = await initMatic(isMainnet, version, maticRPCUrl, ethereumRPCUrl);
+      const { pos, childProvider } = await initMatic(
+        isMainnet,
+        version,
+        maticRPCUrl,
+        ethereumRPCUrl
+      );
 
       try {
-        isCheckpointed = await maticClient.exitUtil.isCheckPointed(burnTxHash);
+        isCheckpointed = await pos.isCheckpointed(burnTxHash);
       } catch (checkpointError: unknown) {
         if (isLastAttempt(i)) {
           throw new IncorrectTxError('Incorrect burn transaction');
@@ -337,13 +372,13 @@ export async function generateAllExitPayloads(
         throw new TxNotCheckpointedError('Burn transaction has not been checkpointed yet');
       }
 
-      const receipt = await maticClient.client.child.getTransactionReceipt(burnTxHash);
+      const receipt = await childProvider.getTransactionReceipt(burnTxHash);
       if (receipt?.logs) {
         assertExitLogPresent({ logs: receipt.logs, eventSignature: sig });
       }
 
       try {
-        result = await maticClient.exitUtil.buildMultiplePayloadsForExit(burnTxHash, sig, false);
+        result = await pos.buildExitPayloads(burnTxHash, sig);
       } catch (buildError: unknown) {
         const err = buildError instanceof Error ? buildError : new Error(String(buildError));
         const deterministic = toDeterministicError(err);
@@ -354,7 +389,7 @@ export async function generateAllExitPayloads(
       }
 
       if (!result) {
-        throw new Error('buildMultiplePayloadsForExit returned no result');
+        throw new Error('buildExitPayloads returned no result');
       }
 
       break;
@@ -364,7 +399,6 @@ export async function generateAllExitPayloads(
       if (isLastAttempt(i)) {
         throw new UpstreamRpcError('Exit payload generation failed after retries', { cause: err });
       }
-      const maticjsErr = error as Record<string, unknown>;
       logger.warn(
         {
           err,
@@ -374,8 +408,7 @@ export async function generateAllExitPayloads(
           ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
           attempt: i + 1,
           maxRetries,
-          errorEvent: maticjsErr['event'],
-          errorCode: maticjsErr['code']
+          ...sdkErrorFields(error)
         },
         'RPC attempt failed, retrying'
       );

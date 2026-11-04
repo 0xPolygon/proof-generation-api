@@ -172,7 +172,7 @@ it('should return merkle proof for block {N} in range [{start}, {end}]', async (
 
 ## Exit payload field reference
 
-Every call to `exit-payload` or `all-exit-payloads` returns a hex string that is an **outer RLP list** of 10 fields, produced by `ExitUtil.encodePayload_` in `@maticnetwork/maticjs`. Understanding which fields are immutable Polygon chain data (and therefore safe to pin) versus variable is the key to writing stable tests.
+Every call to `exit-payload` or `all-exit-payloads` returns a hex string that is an **outer RLP list** of 10 fields, produced by `encodePayload` in `@polygonlabs/maticjs` (`internal/pos-bridge-helpers.ts`). Understanding which fields are immutable Polygon chain data (and therefore safe to pin) versus variable is the key to writing stable tests.
 
 | #   | Field              | Source                                                          | Mutable?                        | Notes                                                                               |
 | --- | ------------------ | --------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------- |

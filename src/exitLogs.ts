@@ -1,3 +1,5 @@
+import { POSBridgeError } from '@polygonlabs/maticjs';
+
 import { BlockNotIncludedError, TxNotCheckpointedError } from './errors.ts';
 
 const ZERO_TOPIC = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -76,23 +78,27 @@ export function assertExitLogPresent({
   }
 }
 
-// maticjs signals these conditions only through error messages. They are
-// properties of the transaction, so retrying (on any RPC) cannot change them.
+// These conditions are properties of the transaction, so retrying (on any RPC)
+// cannot change them. Classified on the SDK's stable POSBridgeError `code` rather
+// than its message text, which is free to change between SDK releases.
 export function toDeterministicError(
   err: Error
 ): BlockNotIncludedError | TxNotCheckpointedError | undefined {
-  if (err.message.includes('Log not found in receipt')) {
-    return new BlockNotIncludedError('Event Signature log not found in tx receipt', { cause: err });
+  if (!(err instanceof POSBridgeError)) return undefined;
+  switch (err.code) {
+    case 'LOG_NOT_FOUND_IN_RECEIPT':
+      return new BlockNotIncludedError('Event Signature log not found in tx receipt', {
+        cause: err
+      });
+    case 'INDEX_OUT_OF_BOUNDS':
+      return new BlockNotIncludedError('Token index out of range for this transaction', {
+        cause: err
+      });
+    case 'BURN_TX_NOT_CHECKPOINTED':
+      return new TxNotCheckpointedError('Burn transaction has not been checkpointed yet', {
+        cause: err
+      });
+    default:
+      return undefined;
   }
-  if (err.message === 'Index is greater than the number of tokens in this transaction') {
-    return new BlockNotIncludedError('Token index out of range for this transaction', {
-      cause: err
-    });
-  }
-  if (err.message.includes('has not been checkpointed')) {
-    return new TxNotCheckpointedError('Burn transaction has not been checkpointed yet', {
-      cause: err
-    });
-  }
-  return undefined;
 }

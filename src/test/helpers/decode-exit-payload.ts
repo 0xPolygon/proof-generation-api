@@ -12,8 +12,8 @@ export interface DecodedExitPayload {
 }
 
 /**
- * Decodes the RLP-encoded exit payload produced by ExitUtil.encodePayload_ in
- * @maticnetwork/maticjs's exit_util.ts.
+ * Decodes the RLP-encoded exit payload produced by encodePayload in
+ * @polygonlabs/maticjs's internal/pos-bridge-helpers.ts.
  *
  * Outer RLP structure — 10 fields (see runbook §"Exit payload field reference"):
  *

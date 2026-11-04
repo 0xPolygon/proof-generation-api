@@ -11,7 +11,7 @@ export class BlockNotIncludedError extends HTTPError {
   override readonly statusCode = 404 as const;
 }
 
-// Kept as 404: thrown when isCheckPointed() cannot resolve the tx hash, which is
+// Kept as 404: thrown when isCheckpointed() cannot resolve the tx hash, which is
 // ambiguous between "invalid hash" and a transient RPC failure. Changing to 400
 // risks breaking consumers that branch on status codes.
 export class IncorrectTxError extends HTTPError {
