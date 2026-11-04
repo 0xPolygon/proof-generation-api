@@ -24,13 +24,17 @@ declare module 'express-serve-static-core' {
 export function getExpressApp(logger: Logger): Express {
   const app = express();
 
-  app.use(cors()); // Enables CORS for all routes
-  app.use(json()); // Parse JSON bodies
-
+  // Mounted before every other middleware: an error raised by an earlier one (e.g. a
+  // malformed JSON body rejected by json()) jumps straight to the error handler, which
+  // logs through req.log. Without it the handler itself threw, and Express printed that
+  // TypeError to stderr as unstructured text instead of a JSON log line.
   app.use((req, _res, next) => {
     req.log = logger.child({ requestId: randomUUID() });
     next();
   });
+
+  app.use(cors()); // Enables CORS for all routes
+  app.use(json()); // Parse JSON bodies
 
   app.use('/api', createIndexRouter());
 
@@ -53,6 +57,19 @@ export function getExpressApp(logger: Logger): Express {
         req.log.debug({ err });
       }
       res.status(err.statusCode).json({ error: true, message: err.message });
+      return;
+    }
+    // Middleware errors (body-parser's http-errors) carry a client-facing 4xx `status`;
+    // they describe a bad request, not a server fault, so answer with that status.
+    if (
+      err instanceof Error &&
+      'status' in err &&
+      typeof err.status === 'number' &&
+      err.status >= 400 &&
+      err.status < 500
+    ) {
+      req.log.debug({ err });
+      res.status(err.status).json({ error: true, message: err.message });
       return;
     }
     const wrappedErr = err instanceof Error ? err : new Error(String(err));
