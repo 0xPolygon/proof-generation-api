@@ -55,7 +55,7 @@ docker stop proof-gen-test
 
 **Entry point:** `src/bin/apiServer.ts` — imports `src/sentry.ts` (Sentry, must load first) then calls `startApiServer()` from `src/index.ts`.
 
-**Request flow:** Express v5 → CORS → JSON parser → `/health-check` → `/api` routes
+**Request flow:** Express v5 → request logger (`req.log`) → CORS → JSON parser → `/health-check` → `/api` routes
 
 **Route mounting:** See `src/routes/index.ts` for the router tree. Each route file in `src/routes/` owns its own path segment.
 
