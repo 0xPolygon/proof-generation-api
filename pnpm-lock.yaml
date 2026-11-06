@@ -15,8 +15,8 @@ importers:
         specifier: ^4.0.0
         version: 4.0.0(@polygonlabs/verror@1.2.0)(@sentry/node@10.41.0)(pino-pretty@13.1.3)
       '@polygonlabs/maticjs':
-        specifier: file:./polygonlabs-maticjs-3.9.13.tgz
-        version: file:polygonlabs-maticjs-3.9.13.tgz(ethers@5.8.0)
+        specifier: 4.0.0-pre.1
+        version: 4.0.0-pre.1(ethers@5.8.0)
       '@polygonlabs/verror':
         specifier: ^1.2.0
         version: 1.2.0
@@ -478,9 +478,14 @@ packages:
     resolution: {integrity: sha512-iH1B076HoAshH1mLpHMgwdGeTs0CYwL0SPMkGuSebZrwBp16v415e9NZXg2jtrqPVQjf6IANe2Vtlr5KswtcZQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@ethereumjs/mpt@10.1.3':
-    resolution: {integrity: sha512-pN43KoH8V0afpIltMFJf0tSSpX9Xssp9LGAyamnYc93oe0r8bRafeizPWR9aDsS+WXSg/IWQscoZ3xTybQSYoA==}
+  '@ethereumjs/mpt@10.1.2':
+    resolution: {integrity: sha512-dBlXpkP1ssp+AcUxsJUrY72LZuE1JQEp1AZn5mgmbBcd2Gwkpyi57q4zATlZbxrZUxp/K9UIidgqxQWcOCbo5g==}
     engines: {node: '>=20'}
+
+  '@ethereumjs/rlp@10.1.2':
+    resolution: {integrity: sha512-T5Zt6C2pd02Wd88Q9A5/UX+He1Q2Y1LntHxz/038tfbUMiqby4fYSSTLEDx+TEfJqw1BsJSBY/TSu6goUzlk+w==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@ethereumjs/rlp@10.1.3':
     resolution: {integrity: sha512-d795YWkN6O8EJh/PgJ2zZKCdBMl8OlqkuVQESoidH666gaFtUuJ01jDtiuqfyOqTNcTdGhHi8LkQv1WEZzvZZw==}
@@ -627,9 +632,6 @@ packages:
     resolution: {integrity: sha512-2I0gnIVPtfnMw9ee9h1dJG7tp81+8Ob3OJb3Mv37rx5L40/b0i7djjCVvGOVqc9AEIQyvyu1i6ypKdFw8R8gQw==}
     engines: {node: ^14.21.3 || >=16}
 
-  '@noble/curves@1.4.2':
-    resolution: {integrity: sha512-TavHr8qycMChk8UwMld0ZDRvatedkzWfH8IiaeGCfymOP5i0hSCozz9vHOL0nkwk7HRMlFnAiKpS2jrUmSybcw==}
-
   '@noble/curves@1.9.7':
     resolution: {integrity: sha512-gbKGcRUYIjA3/zCCNaWDciTMFI0dCkvou3TL8Zmy5Nc7sJ47a0jtOeZoTaMxkuqRo9cRhjOdZJXegxYE5FN/xw==}
     engines: {node: ^14.21.3 || >=16}
@@ -638,13 +640,13 @@ packages:
     resolution: {integrity: sha512-P4/62zrgfH33CneE3Dn4WhJVA22YUU0eR51wKIan4NVRvwsA0YnPTwWGpNbpuacSujmSFLvyzpyuR30+fbq2Ew==}
     engines: {node: '>= 20.19.0'}
 
-  '@noble/hashes@1.4.0':
-    resolution: {integrity: sha512-V1JJ1WTRUqHHrOSh597hURcMqVKVGL/ea3kv0gSnEdsEZ0/+VyPghM1lMNGc00z7CIQorSvbKpuJkxvuHbvdbg==}
-    engines: {node: '>= 16'}
-
   '@noble/hashes@1.8.0':
     resolution: {integrity: sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A==}
     engines: {node: ^14.21.3 || >=16}
+
+  '@noble/hashes@2.2.0':
+    resolution: {integrity: sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg==}
+    engines: {node: '>= 20.19.0'}
 
   '@noble/hashes@2.4.0':
     resolution: {integrity: sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA==}
@@ -902,9 +904,8 @@ packages:
       pino-pretty:
         optional: true
 
-  '@polygonlabs/maticjs@file:polygonlabs-maticjs-3.9.13.tgz':
-    resolution: {integrity: sha512-8pW3sxGm1Zt48ZTPYxz8mfKIP2UOhFau9brjlDpXT6z7rz5un6YDvZYo2yEiXAPqpN7OGj83pRB8WKuoy4J8lQ==, tarball: file:polygonlabs-maticjs-3.9.13.tgz}
-    version: 3.9.13
+  '@polygonlabs/maticjs@4.0.0-pre.1':
+    resolution: {integrity: sha512-h6bb5e3z+8fE2aGBICzOv+UC+Kj84fW3/i/LnlI9jWVVbVmSZDK1zQwbkQnmMAeXt+HsPNh1a/LIZHZjM5qouQ==}
     engines: {node: '>=20'}
     peerDependencies:
       ethers: ^5.6.0 || ^6.0.0
@@ -1076,15 +1077,6 @@ packages:
   '@scalar/types@0.6.8':
     resolution: {integrity: sha512-24AwoTKOggB+VNY65yIuSXwE5/kwjplqrx4v+VYuRBtIMVt3I+Ppaz45Xk3QoDirNCGtraNRpAbfArLRlFcP/w==}
     engines: {node: '>=20'}
-
-  '@scure/base@1.1.9':
-    resolution: {integrity: sha512-8YKhl8GHiNI/pU2VMaofa2Tor7PJRAjwQLBBuilkJ9L5+13yVbC7JO/wS7piioAvPSwR3JKM1IJ/u4xQzbcXKg==}
-
-  '@scure/bip32@1.4.0':
-    resolution: {integrity: sha512-sVUpc0Vq3tXCkDGYVWGIZTRfnvu8LoTDaev7vbwh0omSvVORONr960MQWdKqJDCReIEmTj3PAr73O3aoxz7OPg==}
-
-  '@scure/bip39@1.3.0':
-    resolution: {integrity: sha512-disdg7gHuTDZtY+ZdkmLpPCk7fxZSu3gBiEGuoC1XYxv9cGx3Z6cpTggCgW6odSOOIXCiDjuGejW+aJKCY/pIQ==}
 
   '@sentry/core@10.41.0':
     resolution: {integrity: sha512-TlYMUzyXdx2mICmEKFiCDPDw7fHB/3bIn5lJOOENPmF8SogLTTRiu+HhjIhWkZ9zM/fR3w7WT8qtE/ak7nr24Q==}
@@ -1989,9 +1981,6 @@ packages:
     resolution: {integrity: sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==}
     engines: {node: '>= 0.6'}
 
-  ethereum-cryptography@2.2.1:
-    resolution: {integrity: sha512-r/W8lkHSiTLxUxW8Rf3u4HGB0xQweG2RyETjywylKZSzLWoWAijRz8WCuOtJ6wah+avllXBqZuk29HCCvhEIRg==}
-
   ethers@5.8.0:
     resolution: {integrity: sha512-DUq+7fHrCg1aPDFCHx6UIPb3nmt2XMpM7Y/g2gLhsl3lIBqeAfOJIl1qEvRf2uq3BiKxmh6Fh5pfp2ieyek7Kg==}
 
@@ -2748,10 +2737,6 @@ packages:
     resolution: {integrity: sha512-5b0R4txpzjPWVw/cXXUResoD4hb6U/x9BH08L7nw+GN1sezDzPdxeRvpc9c433fZhBan/wusjbCsqwqm4EIBIQ==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
-  p-limit@6.2.0:
-    resolution: {integrity: sha512-kuUqqHNUqoIWp/c467RI4X6mmyuojY5jGutNU0wVTmEOOfcuwLqyMVoAi9MKi2Ak+5i9+nhmrK4ufZE8069kHA==}
-    engines: {node: '>=18'}
-
   p-locate@4.1.0:
     resolution: {integrity: sha512-R79ZZ/0wAxKGu3oYMlz8jy/kbhsNrS7SKZ7PxEHBgJ5+F2mtFW2fK2cOtBh1cHYkQsbzFV7I+EoRKe6Yt0oK7A==}
     engines: {node: '>=8'}
@@ -2977,10 +2962,6 @@ packages:
 
   rfdc@1.4.1:
     resolution: {integrity: sha512-q1b3N5QkRUWUl7iyylaaj3kOpIT0N2i9MqIEQXP73GVsN9cw3fdx8X63cEmWhJGi2PPCF23Ijp7ktmd39rawIA==}
-
-  rlp@3.0.0:
-    resolution: {integrity: sha512-PD6U2PGk6Vq2spfgiWZdomLvRGDreBLxi5jv5M8EpRo3pU6VEm31KO+HFxE18Q3vgqfDrQ9pZA3FP95rkijNKw==}
-    hasBin: true
 
   rollup@4.59.0:
     resolution: {integrity: sha512-2oMpl67a3zCH9H79LeMcbDhXW/UmWG/y2zuqnF2jQq5uq9TbM9TVyXvA4+t+ne2IIkBdrLpAaRQAvo7YI/Yyeg==}
@@ -3896,7 +3877,7 @@ snapshots:
       '@eslint/core': 1.1.1
       levn: 0.4.1
 
-  '@ethereumjs/mpt@10.1.3':
+  '@ethereumjs/mpt@10.1.2':
     dependencies:
       '@ethereumjs/rlp': 10.1.3
       '@ethereumjs/util': 10.1.3
@@ -3905,6 +3886,8 @@ snapshots:
       lru-cache: 11.0.2
     transitivePeerDependencies:
       - supports-color
+
+  '@ethereumjs/rlp@10.1.2': {}
 
   '@ethereumjs/rlp@10.1.3': {}
 
@@ -4224,10 +4207,6 @@ snapshots:
 
   '@noble/ciphers@1.3.0': {}
 
-  '@noble/curves@1.4.2':
-    dependencies:
-      '@noble/hashes': 1.4.0
-
   '@noble/curves@1.9.7':
     dependencies:
       '@noble/hashes': 1.8.0
@@ -4236,9 +4215,9 @@ snapshots:
     dependencies:
       '@noble/hashes': 2.4.0
 
-  '@noble/hashes@1.4.0': {}
-
   '@noble/hashes@1.8.0': {}
+
+  '@noble/hashes@2.2.0': {}
 
   '@noble/hashes@2.4.0': {}
 
@@ -4556,13 +4535,12 @@ snapshots:
       '@sentry/node': 10.41.0
       pino-pretty: 13.1.3
 
-  '@polygonlabs/maticjs@file:polygonlabs-maticjs-3.9.13.tgz(ethers@5.8.0)':
+  '@polygonlabs/maticjs@4.0.0-pre.1(ethers@5.8.0)':
     dependencies:
-      '@ethereumjs/mpt': 10.1.3
+      '@ethereumjs/mpt': 10.1.2
+      '@ethereumjs/rlp': 10.1.2
+      '@noble/hashes': 2.2.0
       '@polygonlabs/verror': 1.2.0
-      ethereum-cryptography: 2.2.1
-      p-limit: 6.2.0
-      rlp: 3.0.0
     optionalDependencies:
       ethers: 5.8.0
     transitivePeerDependencies:
@@ -4668,19 +4646,6 @@ snapshots:
       nanoid: 5.1.6
       type-fest: 5.4.4
       zod: 4.3.6
-
-  '@scure/base@1.1.9': {}
-
-  '@scure/bip32@1.4.0':
-    dependencies:
-      '@noble/curves': 1.4.2
-      '@noble/hashes': 1.4.0
-      '@scure/base': 1.1.9
-
-  '@scure/bip39@1.3.0':
-    dependencies:
-      '@noble/hashes': 1.4.0
-      '@scure/base': 1.1.9
 
   '@sentry/core@10.41.0': {}
 
@@ -5624,13 +5589,6 @@ snapshots:
 
   etag@1.8.1: {}
 
-  ethereum-cryptography@2.2.1:
-    dependencies:
-      '@noble/curves': 1.4.2
-      '@noble/hashes': 1.4.0
-      '@scure/bip32': 1.4.0
-      '@scure/bip39': 1.3.0
-
   ethers@5.8.0:
     dependencies:
       '@ethersproject/abi': 5.8.0
@@ -6501,10 +6459,6 @@ snapshots:
     dependencies:
       yocto-queue: 1.2.2
 
-  p-limit@6.2.0:
-    dependencies:
-      yocto-queue: 1.2.2
-
   p-locate@4.1.0:
     dependencies:
       p-limit: 2.3.0
@@ -6715,8 +6669,6 @@ snapshots:
   reusify@1.1.0: {}
 
   rfdc@1.4.1: {}
-
-  rlp@3.0.0: {}
 
   rollup@4.59.0:
     dependencies:
