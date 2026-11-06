@@ -1,29 +1,37 @@
 import { providers } from 'ethers';
 
-import type { IPOSClientConfig } from '@maticnetwork/maticjs';
-
-import maticJs from '@maticnetwork/maticjs';
-import maticJs_Ethers from '@maticnetwork/maticjs-ethers';
+import { POSClient } from '@polygonlabs/maticjs';
+import { ethersV5Adapter } from '@polygonlabs/maticjs/ethers-v5';
 
 import { config } from './config.ts';
 
-// Bounds parallel getTransactionReceipt calls maticjs fires per exit-payload build;
-// the default is unbounded, so one large block can exhaust the RPC and the process.
+// Bounds parallel getTransactionReceipt calls maticjs fires per exit-payload build
+// (the SDK's `proofConcurrency`); one large block must not exhaust the RPC and the process.
 const RECEIPT_REQUEST_CONCURRENCY = 10;
 
 // ethers v5 defaults to 120s per call, which lets a slow or overloaded provider hold a
 // request (and its sockets) for minutes; fail the call fast and move to the next provider.
 const RPC_TIMEOUT_MS = 10_000;
 
-const { Converter, POSClient, use } = maticJs; // default export :(
+// The POSClient plus the two providers it was built on. The providers are exposed
+// because some reads have no POSClient method: the receipt pre-check and the raw
+// RootChain `headerBlocks` read both go straight to ethers.
+export interface MaticClient {
+  pos: POSClient;
+  parentProvider: providers.StaticJsonRpcProvider;
+  childProvider: providers.StaticJsonRpcProvider;
+}
 
-// eslint-disable-next-line import-x/no-named-as-default-member
-const { Web3ClientPlugin } = maticJs_Ethers; // Default export shenanigans
+const createProvider = (url: string): providers.StaticJsonRpcProvider =>
+  new providers.StaticJsonRpcProvider({
+    url,
+    timeout: RPC_TIMEOUT_MS,
+    headers: {
+      ...(config.app.xERPCSecretToken ? { 'X-ERPC-Secret-Token': config.app.xERPCSecretToken } : {})
+    }
+  });
 
-// install web3 plugin
-use(Web3ClientPlugin);
-
-// One initialised POSClient per (network, version, maticRPC, ethereumRPC) tuple,
+// One initialised MaticClient per (network, version, maticRPC, ethereumRPC) tuple,
 // shared for the lifetime of the process. Creating a new POSClient on every
 // request was leaking provider instances causing the process to OOMKill under load.
 //
@@ -36,69 +44,35 @@ use(Web3ClientPlugin);
 // The cache stores Promises so that concurrent requests for the same key share
 // a single in-flight initialisation rather than racing to create duplicates.
 // A failed initialisation is evicted from the cache so the next request retries.
-const clientCache = new Map<string, Promise<InstanceType<typeof POSClient>>>();
+const clientCache = new Map<string, Promise<MaticClient>>();
 
 export const initMatic = (
   isMainnet: boolean,
   version: string,
   maticRPC: string,
   ethereumRPC: string
-): Promise<InstanceType<typeof POSClient>> => {
+): Promise<MaticClient> => {
   const cacheKey = `${isMainnet ? 'mainnet' : 'testnet'}:${version}:${maticRPC}:${ethereumRPC}`;
 
   const cached = clientCache.get(cacheKey);
   if (cached) return cached;
 
-  const _network = isMainnet ? 'mainnet' : 'testnet';
+  const parentProvider = createProvider(ethereumRPC);
+  const childProvider = createProvider(maticRPC);
 
-  const maticConfig: IPOSClientConfig = {
-    network: _network,
-    version: version,
-    parent: {
-      provider: new providers.StaticJsonRpcProvider({
-        url: ethereumRPC,
-        timeout: RPC_TIMEOUT_MS,
-        headers: {
-          ...(config.app.xERPCSecretToken
-            ? { 'X-ERPC-Secret-Token': config.app.xERPCSecretToken }
-            : {})
-        }
-      }),
-      defaultConfig: {
-        from: '0x54d03EC0C462e9a01F77579C090cdE0FC2617817'
-      }
-    },
-    child: {
-      provider: new providers.StaticJsonRpcProvider({
-        url: maticRPC,
-        timeout: RPC_TIMEOUT_MS,
-        headers: {
-          ...(config.app.xERPCSecretToken
-            ? { 'X-ERPC-Secret-Token': config.app.xERPCSecretToken }
-            : {})
-        }
-      }),
-      defaultConfig: {
-        from: '0x54d03EC0C462e9a01F77579C090cdE0FC2617817'
-      }
-    },
+  const promise = POSClient.init({
+    network: isMainnet ? 'mainnet' : 'amoy',
+    parent: ethersV5Adapter({ provider: parentProvider }),
+    child: ethersV5Adapter({ provider: childProvider }),
     rootChainDefaultBlock: 'latest',
-    requestConcurrency: RECEIPT_REQUEST_CONCURRENCY
-  };
-
-  const posClient = new POSClient();
-  const promise = posClient
-    .init(maticConfig)
-    .then(() => posClient)
-    .catch((err) => {
+    proofConcurrency: RECEIPT_REQUEST_CONCURRENCY
+  })
+    .then((pos): MaticClient => ({ pos, parentProvider, childProvider }))
+    .catch((err: unknown) => {
       clientCache.delete(cacheKey);
       throw err;
     });
 
   clientCache.set(cacheKey, promise);
   return promise;
-};
-
-export const convert = async (value: any) => {
-  return Converter.toHex(value);
 };

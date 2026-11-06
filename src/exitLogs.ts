@@ -1,4 +1,4 @@
-import { BlockNotIncludedError, TxNotCheckpointedError } from './errors.ts';
+import { BlockNotIncludedError, isPOSBridgeError, TxNotCheckpointedError } from './errors.ts';
 
 const ZERO_TOPIC = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const TRANSFER_SIGNATURE = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
@@ -76,23 +76,25 @@ export function assertExitLogPresent({
   }
 }
 
-// maticjs signals these conditions only through error messages. They are
-// properties of the transaction, so retrying (on any RPC) cannot change them.
+// These conditions are properties of the transaction, so retrying (on any RPC)
+// cannot change them. Classified on the SDK error's stable `code` rather than its
+// message text, which is free to change between SDK releases. The error is recognised
+// by shape, not class (see isPOSBridgeError), so the caller passes the thrown value
+// as-is: normalising it to an `Error` first would strip the shape the guard reads.
 export function toDeterministicError(
-  err: Error
+  err: unknown
 ): BlockNotIncludedError | TxNotCheckpointedError | undefined {
-  if (err.message.includes('Log not found in receipt')) {
-    return new BlockNotIncludedError('Event Signature log not found in tx receipt', { cause: err });
+  if (!isPOSBridgeError(err)) return undefined;
+  // VError only accepts an Error as the cause; a shape-only error is still classified.
+  const cause = err instanceof Error ? { cause: err } : {};
+  switch (err.code) {
+    case 'LOG_NOT_FOUND_IN_RECEIPT':
+      return new BlockNotIncludedError('Event Signature log not found in tx receipt', cause);
+    case 'INDEX_OUT_OF_BOUNDS':
+      return new BlockNotIncludedError('Token index out of range for this transaction', cause);
+    case 'BURN_TX_NOT_CHECKPOINTED':
+      return new TxNotCheckpointedError('Burn transaction has not been checkpointed yet', cause);
+    default:
+      return undefined;
   }
-  if (err.message === 'Index is greater than the number of tokens in this transaction') {
-    return new BlockNotIncludedError('Token index out of range for this transaction', {
-      cause: err
-    });
-  }
-  if (err.message.includes('has not been checkpointed')) {
-    return new TxNotCheckpointedError('Burn transaction has not been checkpointed yet', {
-      cause: err
-    });
-  }
-  return undefined;
 }
