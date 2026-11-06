@@ -88,6 +88,24 @@ describe('exit payload fail-fast', () => {
     expect(mocks.buildExitPayloads).toHaveBeenCalledTimes(1);
   });
 
+  it('classifies an SDK error that is not an Error instance by its shape, without retrying', async () => {
+    // A plain object carrying the SDK's name and code: the shape guard must see it
+    // as thrown, not an Error the service wrapped around it.
+    mocks.buildExitPayloadOnIndex.mockRejectedValue({
+      name: 'POSBridgeError',
+      code: 'LOG_NOT_FOUND_IN_RECEIPT',
+      type: 'log_not_found'
+    });
+
+    const err = await generateExitPayload(TX, TRANSFER_SIG, 0, true, 'v1', logger).catch(
+      (e: unknown) => e
+    );
+
+    expect(err).instanceOf(BlockNotIncludedError);
+    expect(err).property('statusCode', 404);
+    expect(mocks.buildExitPayloadOnIndex).toHaveBeenCalledTimes(1);
+  });
+
   it('reports exhausted transient failures as 5xx, not "log not found"', async () => {
     mocks.buildExitPayloadOnIndex.mockRejectedValue(new Error('timeout of 120000ms exceeded'));
 

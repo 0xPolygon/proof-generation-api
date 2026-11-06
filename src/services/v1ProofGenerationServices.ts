@@ -273,14 +273,13 @@ export async function generateExitPayload(
       try {
         result = await pos.buildExitPayloadOnIndex(burnTxHash, sig, tokenIndex);
       } catch (buildError: unknown) {
-        const err = buildError instanceof Error ? buildError : new Error(String(buildError));
         // BlockNotIncludedError extends HTTPError, which is W-by-default (verror
         // 1.1+): the outer message stays clean for the HTTP response automatically;
         // the original maticjs error is preserved in the cause chain for the logger
         // to unwrap.
-        const deterministic = toDeterministicError(err);
+        const deterministic = toDeterministicError(buildError);
         if (deterministic) throw deterministic;
-        throw err;
+        throw buildError;
       }
 
       if (!result) {
@@ -367,12 +366,11 @@ export async function generateAllExitPayloads(
       try {
         result = await pos.buildExitPayloads(burnTxHash, sig);
       } catch (buildError: unknown) {
-        const err = buildError instanceof Error ? buildError : new Error(String(buildError));
-        const deterministic = toDeterministicError(err);
+        const deterministic = toDeterministicError(buildError);
         if (deterministic) throw deterministic;
         // Rethrow to the outer retry loop, which logs and retries — no need to
         // log here too.
-        throw err;
+        throw buildError;
       }
 
       if (!result) {

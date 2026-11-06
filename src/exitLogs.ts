@@ -79,24 +79,21 @@ export function assertExitLogPresent({
 // These conditions are properties of the transaction, so retrying (on any RPC)
 // cannot change them. Classified on the SDK error's stable `code` rather than its
 // message text, which is free to change between SDK releases. The error is recognised
-// by shape, not class (see isPOSBridgeError).
+// by shape, not class (see isPOSBridgeError), so the caller passes the thrown value
+// as-is: normalising it to an `Error` first would strip the shape the guard reads.
 export function toDeterministicError(
-  err: Error
+  err: unknown
 ): BlockNotIncludedError | TxNotCheckpointedError | undefined {
   if (!isPOSBridgeError(err)) return undefined;
+  // VError only accepts an Error as the cause; a shape-only error is still classified.
+  const cause = err instanceof Error ? { cause: err } : {};
   switch (err.code) {
     case 'LOG_NOT_FOUND_IN_RECEIPT':
-      return new BlockNotIncludedError('Event Signature log not found in tx receipt', {
-        cause: err
-      });
+      return new BlockNotIncludedError('Event Signature log not found in tx receipt', cause);
     case 'INDEX_OUT_OF_BOUNDS':
-      return new BlockNotIncludedError('Token index out of range for this transaction', {
-        cause: err
-      });
+      return new BlockNotIncludedError('Token index out of range for this transaction', cause);
     case 'BURN_TX_NOT_CHECKPOINTED':
-      return new TxNotCheckpointedError('Burn transaction has not been checkpointed yet', {
-        cause: err
-      });
+      return new TxNotCheckpointedError('Burn transaction has not been checkpointed yet', cause);
     default:
       return undefined;
   }
