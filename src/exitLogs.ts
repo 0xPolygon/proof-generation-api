@@ -1,6 +1,4 @@
-import { POSBridgeError } from '@polygonlabs/maticjs';
-
-import { BlockNotIncludedError, TxNotCheckpointedError } from './errors.ts';
+import { BlockNotIncludedError, isPOSBridgeError, TxNotCheckpointedError } from './errors.ts';
 
 const ZERO_TOPIC = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const TRANSFER_SIGNATURE = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
@@ -79,12 +77,13 @@ export function assertExitLogPresent({
 }
 
 // These conditions are properties of the transaction, so retrying (on any RPC)
-// cannot change them. Classified on the SDK's stable POSBridgeError `code` rather
-// than its message text, which is free to change between SDK releases.
+// cannot change them. Classified on the SDK error's stable `code` rather than its
+// message text, which is free to change between SDK releases. The error is recognised
+// by shape, not class (see isPOSBridgeError).
 export function toDeterministicError(
   err: Error
 ): BlockNotIncludedError | TxNotCheckpointedError | undefined {
-  if (!(err instanceof POSBridgeError)) return undefined;
+  if (!isPOSBridgeError(err)) return undefined;
   switch (err.code) {
     case 'LOG_NOT_FOUND_IN_RECEIPT':
       return new BlockNotIncludedError('Event Signature log not found in tx receipt', {

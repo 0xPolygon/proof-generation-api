@@ -2,7 +2,6 @@ import type { BigNumber } from 'ethers';
 
 import { Contract } from 'ethers';
 
-import { POSBridgeError } from '@polygonlabs/maticjs';
 import { RootChainABI } from '@polygonlabs/maticjs/abi';
 import { HTTPError } from '@polygonlabs/verror';
 
@@ -13,6 +12,7 @@ import {
   BlockNotIncludedError,
   IncorrectTxError,
   TxNotCheckpointedError,
+  sdkErrorLogFields,
   UpstreamRpcError
 } from '../errors.ts';
 import { assertExitLogPresent, toDeterministicError } from '../exitLogs.ts';
@@ -47,19 +47,6 @@ interface HeaderBlock {
   root: string;
   createdAt: BigNumber;
 }
-
-// POSBridgeError carries a stable `code` plus the legacy 3.x `type` string. Raw
-// ethers failures pass through the SDK's read path unwrapped and carry their own
-// string `code` (SERVER_ERROR, TIMEOUT, CALL_EXCEPTION) — the bulk of retry warnings
-// in prod — so keep logging that too.
-const sdkErrorFields = (error: unknown) => {
-  if (error instanceof POSBridgeError) return { errorType: error.type, errorCode: error.code };
-  const errorCode =
-    typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
-      ? error.code
-      : undefined;
-  return { errorType: undefined, errorCode };
-};
 
 const getVersionDetails = (version: string) => {
   // RPC lengths read here (not at module scope) so env validation is deferred
@@ -166,7 +153,7 @@ export async function isBlockIncluded(
           ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
           attempt: i + 1,
           maxRetries,
-          ...sdkErrorFields(error)
+          ...sdkErrorLogFields(error)
         },
         'RPC attempt failed, retrying'
       );
@@ -216,7 +203,7 @@ export async function fastMerkleProof(
           ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
           attempt: i + 1,
           maxRetries,
-          ...sdkErrorFields(error)
+          ...sdkErrorLogFields(error)
         },
         'RPC attempt failed, retrying'
       );
@@ -316,7 +303,7 @@ export async function generateExitPayload(
           ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
           attempt: i + 1,
           maxRetries,
-          ...sdkErrorFields(error)
+          ...sdkErrorLogFields(error)
         },
         'RPC attempt failed, retrying'
       );
@@ -408,7 +395,7 @@ export async function generateAllExitPayloads(
           ethereumRpcOrigin: rpcOrigin(ethereumRPCUrl),
           attempt: i + 1,
           maxRetries,
-          ...sdkErrorFields(error)
+          ...sdkErrorLogFields(error)
         },
         'RPC attempt failed, retrying'
       );
