@@ -1,47 +1,86 @@
 import { describe, expect, it } from 'vitest';
 
-import { POSBridgeError } from '@polygonlabs/maticjs';
+import {
+  BurnTxNotCheckpointedError,
+  IndexOutOfBoundsError,
+  LogNotFoundInReceiptError,
+  ProofBuildError,
+  ReceiptsRootMismatchError,
+  TransactionNotFoundError
+} from '@polygonlabs/maticjs';
 
 import { BlockNotIncludedError, TxNotCheckpointedError } from '../errors.ts';
 import { toDeterministicError } from '../exitLogs.ts';
 
-// The SDK error code is the contract this classification relies on: a code that
-// maps here becomes a 404 with a fixed public message and stops the retry loop;
-// anything else is retried on the next RPC. Pin every mapped code plus an
-// unmapped one, so an SDK code rename shows up here rather than as retried 502s.
+const TX = `0x${'1'.repeat(64)}`;
+
+// The SDK condition class is the contract this classification relies on: a condition
+// that maps here becomes a 404 with a fixed public message and stops the retry loop;
+// anything else is retried on the next RPC. Pin every mapped condition plus unmapped
+// ones, so an SDK rename shows up here rather than as retried 502s.
 describe('toDeterministicError', () => {
   const cases = [
     {
-      code: 'LOG_NOT_FOUND_IN_RECEIPT',
+      condition: new LogNotFoundInReceiptError('sdk message', {
+        info: { eventSignature: '0xabc', transactionHash: TX }
+      }),
       errorClass: BlockNotIncludedError,
       message: 'Event Signature log not found in tx receipt'
     },
     {
-      code: 'INDEX_OUT_OF_BOUNDS',
+      condition: new IndexOutOfBoundsError('sdk message', { info: { index: 3, available: 1 } }),
       errorClass: BlockNotIncludedError,
       message: 'Token index out of range for this transaction'
     },
     {
-      code: 'BURN_TX_NOT_CHECKPOINTED',
+      condition: new BurnTxNotCheckpointedError('sdk message'),
       errorClass: TxNotCheckpointedError,
       message: 'Burn transaction has not been checkpointed yet'
     }
   ] as const;
 
-  for (const { code, errorClass, message } of cases) {
-    it(`maps ${code} to ${errorClass.name}`, () => {
-      const cause = new POSBridgeError(code, 'sdk message');
-      const result = toDeterministicError(cause);
+  for (const { condition, errorClass, message } of cases) {
+    it(`maps ${condition.name} to ${errorClass.name}`, () => {
+      const result = toDeterministicError(condition);
       expect(result).instanceOf(errorClass);
       expect(result).property('message', message);
       expect(result).property('statusCode', 404);
+      expect(result).property('cause', condition);
+    });
+
+    // What the SDK actually throws: the operation error naming the call, with the
+    // condition as its cause.
+    it(`maps ${condition.name} wrapped in an operation error`, () => {
+      const thrown = new ProofBuildError({
+        info: { operation: 'buildExitPayloadOnIndex', mode: 'read' },
+        cause: condition
+      });
+      const result = toDeterministicError(thrown);
+      expect(result).instanceOf(errorClass);
+      expect(result).property('message', message);
     });
   }
 
-  it('leaves an unmapped SDK code to the retry loop', () => {
-    expect(toDeterministicError(new POSBridgeError('TRANSACTION_NOT_FOUND', 'not found'))).equal(
-      undefined
-    );
+  it('leaves unmapped SDK conditions to the retry loop', () => {
+    const notFound = new TransactionNotFoundError('not found', { info: { transactionHash: TX } });
+    const rootMismatch = new ReceiptsRootMismatchError('mismatch', {
+      info: {
+        blockNumber: 1,
+        blockHash: TX,
+        expectedReceiptsRoot: TX,
+        computedReceiptsRoot: TX
+      }
+    });
+    expect(toDeterministicError(notFound)).equal(undefined);
+    expect(toDeterministicError(rootMismatch)).equal(undefined);
+    expect(
+      toDeterministicError(
+        new ProofBuildError({
+          info: { operation: 'buildExitPayloads', mode: 'read' },
+          cause: rootMismatch
+        })
+      )
+    ).equal(undefined);
   });
 
   it('leaves a non-SDK error to the retry loop', () => {

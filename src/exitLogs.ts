@@ -1,4 +1,11 @@
-import { BlockNotIncludedError, isPOSBridgeError, TxNotCheckpointedError } from './errors.ts';
+import {
+  BurnTxNotCheckpointedError,
+  IndexOutOfBoundsError,
+  isMaticjsError,
+  LogNotFoundInReceiptError
+} from '@polygonlabs/maticjs';
+
+import { BlockNotIncludedError, TxNotCheckpointedError } from './errors.ts';
 
 const ZERO_TOPIC = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const TRANSFER_SIGNATURE = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
@@ -77,24 +84,26 @@ export function assertExitLogPresent({
 }
 
 // These conditions are properties of the transaction, so retrying (on any RPC)
-// cannot change them. Classified on the SDK error's stable `code` rather than its
-// message text, which is free to change between SDK releases. The error is recognised
-// by shape, not class (see isPOSBridgeError), so the caller passes the thrown value
-// as-is: normalising it to an `Error` first would strip the shape the guard reads.
+// cannot change them. Classified by the SDK condition's class name, found anywhere in
+// the cause chain (the SDK throws an operation error such as ProofBuildError with the
+// condition as its cause), rather than by message text, which is free to change between
+// SDK releases. Recognition is by name, not class (see src/errors.ts), so the caller
+// passes the thrown value as-is: normalising it to an `Error` first would drop a
+// plain-object error's chain.
 export function toDeterministicError(
   err: unknown
 ): BlockNotIncludedError | TxNotCheckpointedError | undefined {
-  if (!isPOSBridgeError(err)) return undefined;
-  // VError only accepts an Error as the cause; a shape-only error is still classified.
+  if (!isMaticjsError(err)) return undefined;
+  // VError only accepts an Error as the cause; a plain-object error is still classified.
   const cause = err instanceof Error ? { cause: err } : {};
-  switch (err.code) {
-    case 'LOG_NOT_FOUND_IN_RECEIPT':
-      return new BlockNotIncludedError('Event Signature log not found in tx receipt', cause);
-    case 'INDEX_OUT_OF_BOUNDS':
-      return new BlockNotIncludedError('Token index out of range for this transaction', cause);
-    case 'BURN_TX_NOT_CHECKPOINTED':
-      return new TxNotCheckpointedError('Burn transaction has not been checkpointed yet', cause);
-    default:
-      return undefined;
+  if (LogNotFoundInReceiptError.has(err)) {
+    return new BlockNotIncludedError('Event Signature log not found in tx receipt', cause);
   }
+  if (IndexOutOfBoundsError.has(err)) {
+    return new BlockNotIncludedError('Token index out of range for this transaction', cause);
+  }
+  if (BurnTxNotCheckpointedError.has(err)) {
+    return new TxNotCheckpointedError('Burn transaction has not been checkpointed yet', cause);
+  }
+  return undefined;
 }

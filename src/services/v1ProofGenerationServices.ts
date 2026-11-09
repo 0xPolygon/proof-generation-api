@@ -228,7 +228,7 @@ export async function generateExitPayload(
   const sig = eventSignature.toLowerCase();
 
   let result;
-  let isCheckpointed;
+  let checkpointed;
 
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
@@ -247,9 +247,9 @@ export async function generateExitPayload(
         ethereumRPCUrl
       );
 
-      if (!isCheckpointed) {
+      if (!checkpointed) {
         try {
-          isCheckpointed = await pos.isCheckpointed(burnTxHash);
+          checkpointed = (await pos.getCheckpointStatus(burnTxHash)).checkpointed;
         } catch (checkpointError: unknown) {
           const err =
             checkpointError instanceof Error ? checkpointError : new Error(String(checkpointError));
@@ -258,7 +258,7 @@ export async function generateExitPayload(
           }
           throw err;
         }
-        if (!isCheckpointed) {
+        if (!checkpointed) {
           throw new TxNotCheckpointedError('Burn transaction has not been checkpointed yet');
         }
       }
@@ -325,7 +325,7 @@ export async function generateAllExitPayloads(
   const sig = eventSignature.toLowerCase();
 
   let result;
-  let isCheckpointed;
+  let checkpointed;
 
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
@@ -345,7 +345,7 @@ export async function generateAllExitPayloads(
       );
 
       try {
-        isCheckpointed = await pos.isCheckpointed(burnTxHash);
+        checkpointed = (await pos.getCheckpointStatus(burnTxHash)).checkpointed;
       } catch (checkpointError: unknown) {
         if (isLastAttempt(i)) {
           throw new IncorrectTxError('Incorrect burn transaction');
@@ -354,7 +354,7 @@ export async function generateAllExitPayloads(
           ? checkpointError
           : new Error(String(checkpointError));
       }
-      if (!isCheckpointed) {
+      if (!checkpointed) {
         throw new TxNotCheckpointedError('Burn transaction has not been checkpointed yet');
       }
 

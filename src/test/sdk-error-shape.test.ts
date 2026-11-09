@@ -1,45 +1,84 @@
 import { describe, expect, it } from 'vitest';
 
-import { BlockNotIncludedError, isPOSBridgeError, sdkErrorLogFields } from '../errors.ts';
+import {
+  BurnTxNotCheckpointedError,
+  LogNotFoundInReceiptError,
+  ProofBuildError,
+  ReceiptsRootMismatchError
+} from '@polygonlabs/maticjs';
+
+import { BlockNotIncludedError, sdkErrorLogFields, TxNotCheckpointedError } from '../errors.ts';
 import { toDeterministicError } from '../exitLogs.ts';
 
-// The SDK error is recognised by its stable `name` and `code`, never by class, so an
+const TX = `0x${'1'.repeat(64)}`;
+
+// SDK errors are recognised by name through the cause chain, never by class, so an
 // error thrown by a different copy of the package (duplicate install, another realm,
-// a bundler split) classifies exactly like one from the copy this service imported.
-// These errors are deliberately NOT instances of the SDK's POSBridgeError class.
-const lookalike = (code: string): Error =>
+// a bundler split) or read back from JSON classifies exactly like one from the copy
+// this service imported. These errors are deliberately NOT instances of the SDK's
+// classes.
+const lookalike = (): Error =>
   Object.assign(new Error('from another copy of the SDK'), {
-    name: 'POSBridgeError',
-    code,
-    type: 'legacy_type'
+    name: 'LogNotFoundInReceiptError',
+    info: { eventSignature: '0xabc', transactionHash: TX }
   });
 
-describe('SDK error recognised by shape', () => {
-  it('classifies a lookalike error as a deterministic 404', () => {
-    const result = toDeterministicError(lookalike('LOG_NOT_FOUND_IN_RECEIPT'));
+const roundTrip = (err: Error): unknown => JSON.parse(JSON.stringify(err));
+
+describe('SDK error recognised by name', () => {
+  it('classifies a lookalike error from another package copy as a deterministic 404', () => {
+    const result = toDeterministicError(lookalike());
     expect(result).instanceOf(BlockNotIncludedError);
     expect(result).property('statusCode', 404);
   });
 
-  it('logs type and code from a plain object shaped like the error', () => {
-    const plain = { name: 'POSBridgeError', code: 'RECEIPTS_ROOT_MISMATCH', type: 'legacy_type' };
-    expect(isPOSBridgeError(plain)).equal(true);
+  it('classifies a JSON round-tripped operation error by its condition', () => {
+    const thrown = new ProofBuildError({
+      info: { operation: 'buildExitPayloadOnIndex', mode: 'read' },
+      cause: new BurnTxNotCheckpointedError('not checkpointed')
+    });
+    const plain = roundTrip(thrown);
+    expect(plain).not.instanceOf(Error);
+    const result = toDeterministicError(plain);
+    expect(result).instanceOf(TxNotCheckpointedError);
+    // VError only takes an Error as cause, so a plain object is classified without one.
+    expect(result).not.property('cause');
     expect(sdkErrorLogFields(plain)).deep.equal({
-      errorType: 'legacy_type',
-      errorCode: 'RECEIPTS_ROOT_MISMATCH'
+      errorType: 'burn_tx_not_checkpointed',
+      errorCode: 'BurnTxNotCheckpointedError'
     });
   });
 
-  it('rejects a different name, a non-string code, and non-objects', () => {
+  it('logs the innermost condition name, and its legacy type where it has one', () => {
+    const condition = new ReceiptsRootMismatchError('mismatch', {
+      info: { blockNumber: 1, blockHash: TX, expectedReceiptsRoot: TX, computedReceiptsRoot: TX }
+    });
+    const thrown = new ProofBuildError({
+      info: { operation: 'buildExitPayloads', mode: 'read' },
+      cause: condition
+    });
+    expect(sdkErrorLogFields(thrown)).deep.equal({
+      errorType: undefined,
+      errorCode: 'ReceiptsRootMismatchError'
+    });
+    expect(sdkErrorLogFields(new BurnTxNotCheckpointedError('x'))).deep.equal({
+      errorType: 'burn_tx_not_checkpointed',
+      errorCode: 'BurnTxNotCheckpointedError'
+    });
+  });
+
+  it('rejects a lookalike without the SDK shape, and non-objects', () => {
+    // Right name but no `info` object: not the SDK's error.
+    const noInfo = Object.assign(new Error('x'), { name: 'LogNotFoundInReceiptError' });
+    expect(toDeterministicError(noInfo)).equal(undefined);
     const wrongName = Object.assign(new Error('x'), {
       name: 'Error',
-      code: 'LOG_NOT_FOUND_IN_RECEIPT'
+      info: { eventSignature: '0xabc', transactionHash: TX }
     });
-    expect(isPOSBridgeError(wrongName)).equal(false);
     expect(toDeterministicError(wrongName)).equal(undefined);
-    expect(isPOSBridgeError({ name: 'POSBridgeError', code: 42 })).equal(false);
-    expect(isPOSBridgeError(null)).equal(false);
-    expect(isPOSBridgeError('POSBridgeError')).equal(false);
+    expect(toDeterministicError(null)).equal(undefined);
+    expect(toDeterministicError('LogNotFoundInReceiptError')).equal(undefined);
+    expect(LogNotFoundInReceiptError.has(noInfo)).equal(false);
   });
 
   it('keeps logging the raw RPC library code for non-SDK errors', () => {

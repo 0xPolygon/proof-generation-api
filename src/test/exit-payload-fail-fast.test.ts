@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { POSBridgeError } from '@polygonlabs/maticjs';
+import { LogNotFoundInReceiptError, ProofBuildError } from '@polygonlabs/maticjs';
 
 import type { Logger } from '../logger.ts';
 
@@ -18,7 +18,7 @@ const TX = `0x${'1'.repeat(64)}`;
 // retry/classification logic runs for real.
 const mocks = vi.hoisted(() => ({
   RPC_COUNT: 2,
-  isCheckpointed: vi.fn(),
+  getCheckpointStatus: vi.fn(),
   buildExitPayloadOnIndex: vi.fn(),
   buildExitPayloads: vi.fn(),
   getTransactionReceipt: vi.fn()
@@ -39,7 +39,7 @@ vi.mock('../maticClient.ts', () => ({
   initMatic: vi.fn(() =>
     Promise.resolve({
       pos: {
-        isCheckpointed: mocks.isCheckpointed,
+        getCheckpointStatus: mocks.getCheckpointStatus,
         buildExitPayloadOnIndex: mocks.buildExitPayloadOnIndex,
         buildExitPayloads: mocks.buildExitPayloads
       },
@@ -51,20 +51,28 @@ vi.mock('../maticClient.ts', () => ({
 // Only warn() is called by the retry loop.
 const logger = { warn: vi.fn() } as unknown as Logger;
 
+// What pos.buildExitPayload* throws when the receipt lacks the log: the operation
+// error naming the call, with the condition as its cause.
+const logNotFound = (): ProofBuildError =>
+  new ProofBuildError({
+    info: { operation: 'buildExitPayloadOnIndex', mode: 'read' },
+    cause: new LogNotFoundInReceiptError('Log not found in receipt', {
+      info: { eventSignature: TRANSFER_SIG, transactionHash: TX }
+    })
+  });
+
 const burnLog = { topics: [TRANSFER_SIG, ZERO_TOPIC, ZERO_TOPIC] };
 const unrelatedLog = { topics: ['0xabc', ZERO_TOPIC, ZERO_TOPIC] };
 
 describe('exit payload fail-fast', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.isCheckpointed.mockResolvedValue(true);
+    mocks.getCheckpointStatus.mockResolvedValue({ checkpointed: true });
     mocks.getTransactionReceipt.mockResolvedValue({ logs: [burnLog] });
   });
 
   it('does not retry a maticjs "Log not found in receipt" error and returns 404', async () => {
-    mocks.buildExitPayloadOnIndex.mockRejectedValue(
-      new POSBridgeError('LOG_NOT_FOUND_IN_RECEIPT', 'Log not found in receipt')
-    );
+    mocks.buildExitPayloadOnIndex.mockRejectedValue(logNotFound());
 
     const err = await generateExitPayload(TX, TRANSFER_SIG, 0, true, 'v1', logger).catch(
       (e: unknown) => e
@@ -76,9 +84,7 @@ describe('exit payload fail-fast', () => {
   });
 
   it('does not retry "Log not found in receipt" for all-exit-payloads either', async () => {
-    mocks.buildExitPayloads.mockRejectedValue(
-      new POSBridgeError('LOG_NOT_FOUND_IN_RECEIPT', 'Log not found in receipt')
-    );
+    mocks.buildExitPayloads.mockRejectedValue(logNotFound());
 
     const err = await generateAllExitPayloads(TX, TRANSFER_SIG, true, 'v1', logger).catch(
       (e: unknown) => e
@@ -88,14 +94,10 @@ describe('exit payload fail-fast', () => {
     expect(mocks.buildExitPayloads).toHaveBeenCalledTimes(1);
   });
 
-  it('classifies an SDK error that is not an Error instance by its shape, without retrying', async () => {
-    // A plain object carrying the SDK's name and code: the shape guard must see it
-    // as thrown, not an Error the service wrapped around it.
-    mocks.buildExitPayloadOnIndex.mockRejectedValue({
-      name: 'POSBridgeError',
-      code: 'LOG_NOT_FOUND_IN_RECEIPT',
-      type: 'log_not_found'
-    });
+  it('classifies an SDK error that is not an Error instance by name, without retrying', async () => {
+    // The SDK error as plain JSON: the recogniser must see it as thrown, not an Error
+    // the service wrapped around it (which would hide its cause chain).
+    mocks.buildExitPayloadOnIndex.mockRejectedValue(JSON.parse(JSON.stringify(logNotFound())));
 
     const err = await generateExitPayload(TX, TRANSFER_SIG, 0, true, 'v1', logger).catch(
       (e: unknown) => e
