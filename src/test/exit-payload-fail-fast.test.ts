@@ -4,7 +4,12 @@ import { LogNotFoundInReceiptError, ProofBuildError } from '@polygonlabs/maticjs
 
 import type { Logger } from '../logger.ts';
 
-import { BlockNotIncludedError, UpstreamRpcError } from '../errors.ts';
+import {
+  BlockNotIncludedError,
+  IncorrectTxError,
+  TxNotCheckpointedError,
+  UpstreamRpcError
+} from '../errors.ts';
 import {
   generateAllExitPayloads,
   generateExitPayload
@@ -204,5 +209,35 @@ describe('exit payload fail-fast', () => {
     );
 
     expect(mocks.buildExitPayloadOnIndex).toHaveBeenCalledWith(TX, TRANSFER_SIG, 0);
+  });
+  // getCheckpointStatus answers "not yet" with a reason instead of rejecting. A burn that
+  // is still pending (not in a block) or mined but not yet checkpointed is a property of
+  // the tx right now, so it is answered at once with the 404 clients poll on, not retried.
+  for (const reason of ['pending', 'not-checkpointed'] as const) {
+    it(`answers a ${reason} burn with 404 "not checkpointed" without building or retrying`, async () => {
+      mocks.getCheckpointStatus.mockResolvedValue({ checkpointed: false, reason });
+
+      const err = await generateExitPayload(TX, TRANSFER_SIG, 0, true, 'v1', logger).catch(
+        (e: unknown) => e
+      );
+
+      expect(err).instanceOf(TxNotCheckpointedError);
+      expect(err).property('message', 'Burn transaction has not been checkpointed yet');
+      expect(mocks.getCheckpointStatus).toHaveBeenCalledTimes(1);
+      expect(mocks.buildExitPayloadOnIndex).not.toHaveBeenCalled();
+    });
+  }
+
+  it('retries a rejected checkpoint lookup on every RPC, then answers 404 "Incorrect burn transaction"', async () => {
+    mocks.getCheckpointStatus.mockRejectedValue(new Error('transaction not found'));
+
+    const err = await generateAllExitPayloads(TX, TRANSFER_SIG, true, 'v1', logger).catch(
+      (e: unknown) => e
+    );
+
+    expect(err).instanceOf(IncorrectTxError);
+    expect(err).property('statusCode', 404);
+    expect(mocks.getCheckpointStatus).toHaveBeenCalledTimes(2 * mocks.RPC_COUNT);
+    expect(mocks.buildExitPayloads).not.toHaveBeenCalled();
   });
 });
