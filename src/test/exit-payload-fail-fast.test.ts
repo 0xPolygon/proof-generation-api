@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LogNotFoundInReceiptError, ProofBuildError } from '@polygonlabs/maticjs';
+
 import type { Logger } from '../logger.ts';
 
-import { BlockNotIncludedError, UpstreamRpcError } from '../errors.ts';
+import {
+  BlockNotIncludedError,
+  IncorrectTxError,
+  TxNotCheckpointedError,
+  UpstreamRpcError
+} from '../errors.ts';
 import {
   generateAllExitPayloads,
   generateExitPayload
@@ -16,9 +23,9 @@ const TX = `0x${'1'.repeat(64)}`;
 // retry/classification logic runs for real.
 const mocks = vi.hoisted(() => ({
   RPC_COUNT: 2,
-  isCheckPointed: vi.fn(),
-  buildPayloadForExit: vi.fn(),
-  buildMultiplePayloadsForExit: vi.fn(),
+  getCheckpointStatus: vi.fn(),
+  buildExitPayloadOnIndex: vi.fn(),
+  buildExitPayloads: vi.fn(),
   getTransactionReceipt: vi.fn()
 }));
 
@@ -34,15 +41,14 @@ vi.mock('../config.ts', () => {
 });
 
 vi.mock('../maticClient.ts', () => ({
-  convert: vi.fn(),
   initMatic: vi.fn(() =>
     Promise.resolve({
-      client: { child: { getTransactionReceipt: mocks.getTransactionReceipt } },
-      exitUtil: {
-        isCheckPointed: mocks.isCheckPointed,
-        buildPayloadForExit: mocks.buildPayloadForExit,
-        buildMultiplePayloadsForExit: mocks.buildMultiplePayloadsForExit
-      }
+      pos: {
+        getCheckpointStatus: mocks.getCheckpointStatus,
+        buildExitPayloadOnIndex: mocks.buildExitPayloadOnIndex,
+        buildExitPayloads: mocks.buildExitPayloads
+      },
+      childProvider: { getTransactionReceipt: mocks.getTransactionReceipt }
     })
   )
 }));
@@ -50,18 +56,28 @@ vi.mock('../maticClient.ts', () => ({
 // Only warn() is called by the retry loop.
 const logger = { warn: vi.fn() } as unknown as Logger;
 
+// What pos.buildExitPayload* throws when the receipt lacks the log: the operation
+// error naming the call, with the condition as its cause.
+const logNotFound = (): ProofBuildError =>
+  new ProofBuildError({
+    info: { operation: 'buildExitPayloadOnIndex', mode: 'read' },
+    cause: new LogNotFoundInReceiptError('Log not found in receipt', {
+      info: { eventSignature: TRANSFER_SIG, transactionHash: TX }
+    })
+  });
+
 const burnLog = { topics: [TRANSFER_SIG, ZERO_TOPIC, ZERO_TOPIC] };
 const unrelatedLog = { topics: ['0xabc', ZERO_TOPIC, ZERO_TOPIC] };
 
 describe('exit payload fail-fast', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.isCheckPointed.mockResolvedValue(true);
+    mocks.getCheckpointStatus.mockResolvedValue({ checkpointed: true });
     mocks.getTransactionReceipt.mockResolvedValue({ logs: [burnLog] });
   });
 
   it('does not retry a maticjs "Log not found in receipt" error and returns 404', async () => {
-    mocks.buildPayloadForExit.mockRejectedValue(new Error('Log not found in receipt'));
+    mocks.buildExitPayloadOnIndex.mockRejectedValue(logNotFound());
 
     const err = await generateExitPayload(TX, TRANSFER_SIG, 0, true, 'v1', logger).catch(
       (e: unknown) => e
@@ -69,22 +85,36 @@ describe('exit payload fail-fast', () => {
 
     expect(err).instanceOf(BlockNotIncludedError);
     expect(err).property('statusCode', 404);
-    expect(mocks.buildPayloadForExit).toHaveBeenCalledTimes(1);
+    expect(mocks.buildExitPayloadOnIndex).toHaveBeenCalledTimes(1);
   });
 
   it('does not retry "Log not found in receipt" for all-exit-payloads either', async () => {
-    mocks.buildMultiplePayloadsForExit.mockRejectedValue(new Error('Log not found in receipt'));
+    mocks.buildExitPayloads.mockRejectedValue(logNotFound());
 
     const err = await generateAllExitPayloads(TX, TRANSFER_SIG, true, 'v1', logger).catch(
       (e: unknown) => e
     );
 
     expect(err).property('statusCode', 404);
-    expect(mocks.buildMultiplePayloadsForExit).toHaveBeenCalledTimes(1);
+    expect(mocks.buildExitPayloads).toHaveBeenCalledTimes(1);
+  });
+
+  it('classifies an SDK error that is not an Error instance by name, without retrying', async () => {
+    // The SDK error as plain JSON: the recogniser must see it as thrown, not an Error
+    // the service wrapped around it (which would hide its cause chain).
+    mocks.buildExitPayloadOnIndex.mockRejectedValue(JSON.parse(JSON.stringify(logNotFound())));
+
+    const err = await generateExitPayload(TX, TRANSFER_SIG, 0, true, 'v1', logger).catch(
+      (e: unknown) => e
+    );
+
+    expect(err).instanceOf(BlockNotIncludedError);
+    expect(err).property('statusCode', 404);
+    expect(mocks.buildExitPayloadOnIndex).toHaveBeenCalledTimes(1);
   });
 
   it('reports exhausted transient failures as 5xx, not "log not found"', async () => {
-    mocks.buildPayloadForExit.mockRejectedValue(new Error('timeout of 120000ms exceeded'));
+    mocks.buildExitPayloadOnIndex.mockRejectedValue(new Error('timeout of 120000ms exceeded'));
 
     const err = await generateExitPayload(TX, TRANSFER_SIG, 0, true, 'v1', logger).catch(
       (e: unknown) => e
@@ -92,14 +122,14 @@ describe('exit payload fail-fast', () => {
 
     expect(err).instanceOf(UpstreamRpcError);
     expect(err).property('statusCode', 502);
-    expect(mocks.buildPayloadForExit).toHaveBeenCalledTimes(2 * mocks.RPC_COUNT);
+    expect(mocks.buildExitPayloadOnIndex).toHaveBeenCalledTimes(2 * mocks.RPC_COUNT);
   });
 
   it('stops retrying once the retry time budget is spent', async () => {
     // Each failed attempt "takes" 15s, so the 20s budget is spent after two attempts.
     let now = Date.now();
     const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
-    mocks.buildPayloadForExit.mockImplementation(() => {
+    mocks.buildExitPayloadOnIndex.mockImplementation(() => {
       now += 15_000;
       return Promise.reject(new Error('timeout'));
     });
@@ -110,7 +140,7 @@ describe('exit payload fail-fast', () => {
     clock.mockRestore();
 
     expect(err).instanceOf(UpstreamRpcError);
-    expect(mocks.buildPayloadForExit).toHaveBeenCalledTimes(2);
+    expect(mocks.buildExitPayloadOnIndex).toHaveBeenCalledTimes(2);
   });
 
   it('rejects a receipt with no matching log without building the proof', async () => {
@@ -121,7 +151,7 @@ describe('exit payload fail-fast', () => {
     );
 
     expect(err).property('statusCode', 404);
-    expect(mocks.buildPayloadForExit).toHaveBeenCalledTimes(0);
+    expect(mocks.buildExitPayloadOnIndex).toHaveBeenCalledTimes(0);
   });
 
   it('rejects an out-of-range tokenIndex without building the proof', async () => {
@@ -130,7 +160,7 @@ describe('exit payload fail-fast', () => {
     );
 
     expect(err).property('statusCode', 404);
-    expect(mocks.buildPayloadForExit).toHaveBeenCalledTimes(0);
+    expect(mocks.buildExitPayloadOnIndex).toHaveBeenCalledTimes(0);
   });
 
   it('does not treat a Transfer that is not a burn (non-zero recipient) as a match', async () => {
@@ -143,16 +173,16 @@ describe('exit payload fail-fast', () => {
     );
 
     expect(err).property('statusCode', 404);
-    expect(mocks.buildMultiplePayloadsForExit).toHaveBeenCalledTimes(0);
+    expect(mocks.buildExitPayloads).toHaveBeenCalledTimes(0);
   });
 
   it('still builds the proof when a matching log exists', async () => {
-    mocks.buildPayloadForExit.mockResolvedValue('0xpayload');
+    mocks.buildExitPayloadOnIndex.mockResolvedValue('0xpayload');
 
     const res = await generateExitPayload(TX, TRANSFER_SIG, 0, true, 'v1', logger);
 
     expect(res).property('result', '0xpayload');
-    expect(mocks.buildPayloadForExit).toHaveBeenCalledTimes(1);
+    expect(mocks.buildExitPayloadOnIndex).toHaveBeenCalledTimes(1);
   });
 
   it('reports an exhausted receipt pre-check as 502, not a generic 500', async () => {
@@ -167,7 +197,7 @@ describe('exit payload fail-fast', () => {
   });
 
   it('passes a mixed-case signature to maticjs lowercased, so both agree on the burn log', async () => {
-    mocks.buildPayloadForExit.mockResolvedValue('0xpayload');
+    mocks.buildExitPayloadOnIndex.mockResolvedValue('0xpayload');
 
     await generateExitPayload(
       TX,
@@ -178,6 +208,36 @@ describe('exit payload fail-fast', () => {
       logger
     );
 
-    expect(mocks.buildPayloadForExit).toHaveBeenCalledWith(TX, TRANSFER_SIG, false, 0);
+    expect(mocks.buildExitPayloadOnIndex).toHaveBeenCalledWith(TX, TRANSFER_SIG, 0);
+  });
+  // getCheckpointStatus answers "not yet" with a reason instead of rejecting. A burn that
+  // is still pending (not in a block) or mined but not yet checkpointed is a property of
+  // the tx right now, so it is answered at once with the 404 clients poll on, not retried.
+  for (const reason of ['pending', 'not-checkpointed'] as const) {
+    it(`answers a ${reason} burn with 404 "not checkpointed" without building or retrying`, async () => {
+      mocks.getCheckpointStatus.mockResolvedValue({ checkpointed: false, reason });
+
+      const err = await generateExitPayload(TX, TRANSFER_SIG, 0, true, 'v1', logger).catch(
+        (e: unknown) => e
+      );
+
+      expect(err).instanceOf(TxNotCheckpointedError);
+      expect(err).property('message', 'Burn transaction has not been checkpointed yet');
+      expect(mocks.getCheckpointStatus).toHaveBeenCalledTimes(1);
+      expect(mocks.buildExitPayloadOnIndex).not.toHaveBeenCalled();
+    });
+  }
+
+  it('retries a rejected checkpoint lookup on every RPC, then answers 404 "Incorrect burn transaction"', async () => {
+    mocks.getCheckpointStatus.mockRejectedValue(new Error('transaction not found'));
+
+    const err = await generateAllExitPayloads(TX, TRANSFER_SIG, true, 'v1', logger).catch(
+      (e: unknown) => e
+    );
+
+    expect(err).instanceOf(IncorrectTxError);
+    expect(err).property('statusCode', 404);
+    expect(mocks.getCheckpointStatus).toHaveBeenCalledTimes(2 * mocks.RPC_COUNT);
+    expect(mocks.buildExitPayloads).not.toHaveBeenCalled();
   });
 });

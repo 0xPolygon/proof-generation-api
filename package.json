@@ -58,9 +58,8 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.4.1",
-    "@maticnetwork/maticjs": "^3.9.10",
-    "@maticnetwork/maticjs-ethers": "^1.1.0",
     "@polygonlabs/logger": "^4.0.0",
+    "@polygonlabs/maticjs": "4.0.0-pre.2",
     "@polygonlabs/verror": "^1.2.0",
     "@scalar/express-api-reference": "^0.8.45",
     "@sentry/node": "^10.39.0",
