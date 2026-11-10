@@ -1,5 +1,11 @@
 # proof-generation-api
 
+## 2.1.0
+
+### Minor Changes
+
+- [#102](https://github.com/0xPolygon/proof-generation-api/pull/102) [`715ce53`](https://github.com/0xPolygon/proof-generation-api/commit/715ce53cee963cdb992b9a973dc1853286cdd0c6) Thanks [@MaximusHaximus](https://github.com/MaximusHaximus)! - Migrate to `@polygonlabs/maticjs` 4.0 (exact prerelease pin) from the frozen `@maticnetwork/maticjs` 3.x line. API responses are unchanged byte-for-byte, with one exception: an exit-payload request for a burn transaction that is still pending (submitted but not yet in a block) now gets an immediate `404` "Burn transaction has not been checkpointed yet", the same answer as for a mined burn awaiting its checkpoint. It used to fail after exhausting retries. Retry-warning log lines replace the `errorEvent` field (empty for SDK errors; the full error, including any RPC-library event, is still logged under `err`) with `errorType` (the SDK's legacy error type); `errorCode` now carries the name of the SDK condition behind the failure (for example `LogNotFoundInReceiptError`), or the RPC library's code for raw RPC failures as before.
+
 ## 2.0.4
 
 ### Patch Changes
@@ -33,7 +39,6 @@
 - [#89](https://github.com/0xPolygon/proof-generation-api/pull/89) [`58a7e8b`](https://github.com/0xPolygon/proof-generation-api/commit/58a7e8bd4c7212544177f2c1e41ef6e530604c88) Thanks [@shan8851](https://github.com/shan8851)! - Remove the zkEVM proof-generation endpoints (`/zkevm/mainnet` and `/zkevm/testnet` routes) — the underlying chains are sunset and their infrastructure no longer answers. PoS (v1) endpoints are unchanged.
 
   ## Breaking changes
-
   - Removed `GET /api/zkevm/{network}/bridge`
   - Removed `GET /api/zkevm/{network}/merkle-proof`
   - Removed the `ZKEVM_MAINNET_URL` and `ZKEVM_TESTNET_URL` environment variables — they are no longer recognized configuration
