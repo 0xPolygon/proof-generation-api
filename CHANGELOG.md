@@ -1,5 +1,11 @@
 # proof-generation-api
 
+## 2.1.1
+
+### Patch Changes
+
+- [#104](https://github.com/0xPolygon/proof-generation-api/pull/104) [`f46caf8`](https://github.com/0xPolygon/proof-generation-api/commit/f46caf815ac3ae1b6c81b733aae4d3747cb48a4d) Thanks [@MaximusHaximus](https://github.com/MaximusHaximus)! - Requests for a fast merkle proof over a block range wider than 65536 blocks now get an immediate `400` "Block range too large: end - start + 1 must be at most 65536" instead of being retried against every RPC provider. Exit-payload requests for the all-zero transaction hash get the existing `404` "Incorrect burn transaction" without any RPC call, and a transaction that every configured provider reports as unknown is now asked about once per provider rather than twice before the same `404` is returned.
+
 ## 2.1.0
 
 ### Minor Changes
@@ -39,7 +45,6 @@
 - [#89](https://github.com/0xPolygon/proof-generation-api/pull/89) [`58a7e8b`](https://github.com/0xPolygon/proof-generation-api/commit/58a7e8bd4c7212544177f2c1e41ef6e530604c88) Thanks [@shan8851](https://github.com/shan8851)! - Remove the zkEVM proof-generation endpoints (`/zkevm/mainnet` and `/zkevm/testnet` routes) — the underlying chains are sunset and their infrastructure no longer answers. PoS (v1) endpoints are unchanged.
 
   ## Breaking changes
-
   - Removed `GET /api/zkevm/{network}/bridge`
   - Removed `GET /api/zkevm/{network}/merkle-proof`
   - Removed the `ZKEVM_MAINNET_URL` and `ZKEVM_TESTNET_URL` environment variables — they are no longer recognized configuration
