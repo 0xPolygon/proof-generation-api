@@ -66,4 +66,16 @@ describe('merkle proof generation', { timeout: 30_000 }, () => {
     expect(res).property('body').property('error', true);
     expect(res).property('body').property('message', 'Invalid start or end or block numbers!');
   });
+
+  it('should 400 naming the limit when the block range exceeds 65536 blocks', async () => {
+    const res = await getAgent().get(
+      '/api/v1/matic/fast-merkle-proof?start=1&end=100000&number=50000'
+    );
+
+    expect(res).property('status', 400);
+    expect(res).property('body').property('error', true);
+    expect(res)
+      .property('body')
+      .property('message', 'Block range too large: end - start + 1 must be at most 65536');
+  });
 });
