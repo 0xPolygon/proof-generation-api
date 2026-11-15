@@ -28,27 +28,40 @@ export const BlockIncludedSchema = z.object({
   query: z.object({})
 });
 
+// The checkpoint merkle tree is at most 16 levels deep, so a block range can span at most
+// 2^16 blocks; a wider range can never yield a proof, whichever RPC is asked.
+export const MAX_BLOCK_RANGE = 2 ** 16;
+
 export const FastMerkleProofSchema = z.object({
   params: z.object({
     network: V1NetworkSchema.openapi({ description: 'PoS network identifier' })
   }),
-  query: z.object({
-    start: z.coerce
-      .number({ error: () => 'Invalid start, end or block number!' })
-      .int({ message: 'Invalid start, end or block number!' })
-      .nonnegative({ message: 'Invalid start, end or block number!' })
-      .openapi({ description: 'Start block number' }),
-    end: z.coerce
-      .number({ error: () => 'Invalid start, end or block number!' })
-      .int({ message: 'Invalid start, end or block number!' })
-      .nonnegative({ message: 'Invalid start, end or block number!' })
-      .openapi({ description: 'End block number' }),
-    number: z.coerce
-      .number({ error: () => 'Invalid start, end or block number!' })
-      .int({ message: 'Invalid start, end or block number!' })
-      .nonnegative({ message: 'Invalid start, end or block number!' })
-      .openapi({ description: 'Target block number' })
-  })
+  query: z
+    .object({
+      start: z.coerce
+        .number({ error: () => 'Invalid start, end or block number!' })
+        .int({ message: 'Invalid start, end or block number!' })
+        .nonnegative({ message: 'Invalid start, end or block number!' })
+        .openapi({ description: 'Start block number' }),
+      end: z.coerce
+        .number({ error: () => 'Invalid start, end or block number!' })
+        .int({ message: 'Invalid start, end or block number!' })
+        .nonnegative({ message: 'Invalid start, end or block number!' })
+        .openapi({ description: 'End block number' }),
+      number: z.coerce
+        .number({ error: () => 'Invalid start, end or block number!' })
+        .int({ message: 'Invalid start, end or block number!' })
+        .nonnegative({ message: 'Invalid start, end or block number!' })
+        .openapi({ description: 'Target block number' })
+    })
+    .superRefine((query, ctx) => {
+      if (query.end - query.start + 1 > MAX_BLOCK_RANGE) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `Block range too large: end - start + 1 must be at most ${MAX_BLOCK_RANGE}`
+        });
+      }
+    })
 });
 
 export const ExitPayloadSchema = z.object({

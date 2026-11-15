@@ -2,8 +2,9 @@ import type { BigNumber } from 'ethers';
 
 import { Contract } from 'ethers';
 
+import { MerkleTreeDepthExceededError, TransactionNotFoundError } from '@polygonlabs/maticjs';
 import { RootChainABI } from '@polygonlabs/maticjs/abi';
-import { HTTPError } from '@polygonlabs/verror';
+import { BadRequest, HTTPError } from '@polygonlabs/verror';
 
 import type { Logger } from '../logger.ts';
 
@@ -17,6 +18,16 @@ import {
 } from '../errors.ts';
 import { assertExitLogPresent, toDeterministicError } from '../exitLogs.ts';
 import { initMatic } from '../maticClient.ts';
+import { MAX_BLOCK_RANGE } from '../schemas.ts';
+
+// The all-zero hash is never a transaction, so it is answered like any other unknown hash
+// without asking an RPC.
+const ZERO_TX_HASH = `0x${'0'.repeat(64)}`;
+const assertNotZeroTxHash = (burnTxHash: string): void => {
+  if (burnTxHash === ZERO_TX_HASH) {
+    throw new IncorrectTxError('Incorrect burn transaction');
+  }
+};
 
 // Returns only the protocol+host of an RPC URL so that secret tokens in query
 // params are never written to logs.
@@ -35,6 +46,37 @@ const RETRY_BUDGET_MS = 20_000;
 const createIsLastAttempt = (maxRetries: number) => {
   const deadline = Date.now() + RETRY_BUDGET_MS;
   return (attempt: number) => attempt === maxRetries - 1 || Date.now() >= deadline;
+};
+
+// A node that does not know a transaction is not proof it does not exist (a lagging or
+// index-limited node says the same), so not-found is never short-circuited on the first
+// answer. The request is answered "unknown" only once every configured endpoint has itself
+// said not-found; an endpoint that errored instead has not voted, and other failures keep
+// the full retry loop. The second pass would only re-ask nodes that already said not-found.
+const countConfiguredEndpoints = ({
+  maticRPC,
+  ethereumRPC
+}: {
+  maticRPC: readonly (string | undefined)[];
+  ethereumRPC: readonly (string | undefined)[];
+}): number => maticRPC.filter((url, index) => url && ethereumRPC[index]).length;
+
+const allEndpointsSayNotFound = ({
+  err,
+  rpcIndex,
+  notFoundVotes,
+  configuredEndpoints
+}: {
+  err: unknown;
+  rpcIndex: number;
+  notFoundVotes: Set<number>;
+  configuredEndpoints: number;
+}): boolean => {
+  if (!TransactionNotFoundError.has(err)) {
+    return false;
+  }
+  notFoundVotes.add(rpcIndex);
+  return notFoundVotes.size >= configuredEndpoints;
 };
 
 // RootChain.headerBlocks(uint256) as ethers v5 decodes it. The response forwards these
@@ -190,6 +232,14 @@ export async function fastMerkleProof(
       proof = await pos.getBlockProof(number, { start: Number(start), end: Number(end) });
       break;
     } catch (error: unknown) {
+      // A range too wide for the checkpoint tree is a property of the request; no RPC
+      // can change it.
+      if (MerkleTreeDepthExceededError.has(error)) {
+        throw new BadRequest(
+          `Block range too large: end - start + 1 must be at most ${MAX_BLOCK_RANGE}`,
+          error instanceof Error ? { cause: error } : {}
+        );
+      }
       if (isLastAttempt(i)) {
         throw error;
       }
@@ -226,9 +276,12 @@ export async function generateExitPayload(
   // maticjs matches its burn-event special cases case-sensitively; normalising here keeps
   // the pre-check and the SDK agreeing on which log a mixed-case signature selects.
   const sig = eventSignature.toLowerCase();
+  assertNotZeroTxHash(burnTxHash);
 
   let result;
   let checkpointed;
+  const notFoundVotes = new Set<number>();
+  const configuredEndpoints = countConfiguredEndpoints({ maticRPC, ethereumRPC });
 
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
@@ -253,7 +306,15 @@ export async function generateExitPayload(
         } catch (checkpointError: unknown) {
           const err =
             checkpointError instanceof Error ? checkpointError : new Error(String(checkpointError));
-          if (isLastAttempt(i)) {
+          if (
+            isLastAttempt(i) ||
+            allEndpointsSayNotFound({
+              err: checkpointError,
+              rpcIndex,
+              notFoundVotes,
+              configuredEndpoints
+            })
+          ) {
             throw new IncorrectTxError('Incorrect burn transaction');
           }
           throw err;
@@ -323,9 +384,12 @@ export async function generateAllExitPayloads(
   const initialRpcIndex = isMainnet ? config.mainnetRpcIndex : config.testnetRpcIndex;
   // See generateExitPayload: keeps the pre-check and maticjs on the same log selection.
   const sig = eventSignature.toLowerCase();
+  assertNotZeroTxHash(burnTxHash);
 
   let result;
   let checkpointed;
+  const notFoundVotes = new Set<number>();
+  const configuredEndpoints = countConfiguredEndpoints({ maticRPC, ethereumRPC });
 
   for (let i = 0; i < maxRetries; i++) {
     const rpcIndex = (initialRpcIndex + i) % rpcLength;
@@ -347,7 +411,15 @@ export async function generateAllExitPayloads(
       try {
         checkpointed = (await pos.getCheckpointStatus(burnTxHash)).checkpointed;
       } catch (checkpointError: unknown) {
-        if (isLastAttempt(i)) {
+        if (
+          isLastAttempt(i) ||
+          allEndpointsSayNotFound({
+            err: checkpointError,
+            rpcIndex,
+            notFoundVotes,
+            configuredEndpoints
+          })
+        ) {
           throw new IncorrectTxError('Incorrect burn transaction');
         }
         throw checkpointError instanceof Error

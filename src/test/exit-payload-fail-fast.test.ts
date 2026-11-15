@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { LogNotFoundInReceiptError, ProofBuildError } from '@polygonlabs/maticjs';
+import {
+  BridgeStatusError,
+  LogNotFoundInReceiptError,
+  ProofBuildError,
+  TransactionNotFoundError
+} from '@polygonlabs/maticjs';
 
 import type { Logger } from '../logger.ts';
 
@@ -65,6 +70,17 @@ const logNotFound = (): ProofBuildError =>
       info: { eventSignature: TRANSFER_SIG, transactionHash: TX }
     })
   });
+
+// What pos.getCheckpointStatus rejects with for a hash the node does not know.
+const txNotFound = (): BridgeStatusError =>
+  new BridgeStatusError({
+    info: { operation: 'getCheckpointStatus', mode: 'read' },
+    cause: new TransactionNotFoundError(`Transaction ${TX} was not found`, {
+      info: { transactionHash: TX }
+    })
+  });
+
+const ZERO_HASH = `0x${'0'.repeat(64)}`;
 
 const burnLog = { topics: [TRANSFER_SIG, ZERO_TOPIC, ZERO_TOPIC] };
 const unrelatedLog = { topics: ['0xabc', ZERO_TOPIC, ZERO_TOPIC] };
@@ -240,4 +256,76 @@ describe('exit payload fail-fast', () => {
     expect(mocks.getCheckpointStatus).toHaveBeenCalledTimes(2 * mocks.RPC_COUNT);
     expect(mocks.buildExitPayloads).not.toHaveBeenCalled();
   });
+
+  const exitPayloadFunctions = [
+    {
+      name: 'generateExitPayload',
+      run: (hash: string) => generateExitPayload(hash, TRANSFER_SIG, 0, true, 'v1', logger)
+    },
+    {
+      name: 'generateAllExitPayloads',
+      run: (hash: string) => generateAllExitPayloads(hash, TRANSFER_SIG, true, 'v1', logger)
+    }
+  ];
+
+  for (const { name, run } of exitPayloadFunctions) {
+    describe(`${name} missing transaction`, () => {
+      it('answers the all-zero hash with the 404 "Incorrect burn transaction" before any RPC', async () => {
+        const err = await run(ZERO_HASH).catch((e: unknown) => e);
+
+        expect(err).instanceOf(IncorrectTxError);
+        expect(err).property('statusCode', 404);
+        expect(err).property('message', 'Incorrect burn transaction');
+        expect(mocks.getCheckpointStatus).toHaveBeenCalledTimes(0);
+      });
+
+      it('asks every endpoint once for a not-found transaction, then answers 404', async () => {
+        mocks.getCheckpointStatus.mockRejectedValue(txNotFound());
+
+        const err = await run(TX).catch((e: unknown) => e);
+
+        expect(err).instanceOf(IncorrectTxError);
+        expect(err).property('statusCode', 404);
+        expect(err).property('message', 'Incorrect burn transaction');
+        expect(mocks.getCheckpointStatus).toHaveBeenCalledTimes(mocks.RPC_COUNT);
+      });
+
+      it('does not count an endpoint that failed for another reason as a not-found vote', async () => {
+        // Endpoint 0 errors, every later one says not-found: endpoint 0 has not voted yet,
+        // so the loop goes round to it again instead of answering after one pass.
+        mocks.getCheckpointStatus
+          .mockRejectedValueOnce(new Error('timeout'))
+          .mockRejectedValue(txNotFound());
+
+        const err = await run(TX).catch((e: unknown) => e);
+
+        expect(err).instanceOf(IncorrectTxError);
+        expect(err).property('statusCode', 404);
+        expect(mocks.getCheckpointStatus).toHaveBeenCalledTimes(mocks.RPC_COUNT + 1);
+      });
+
+      it('retries a plain rejection on every endpoint twice before answering 404', async () => {
+        mocks.getCheckpointStatus.mockRejectedValue(new Error('transaction not found'));
+
+        const err = await run(TX).catch((e: unknown) => e);
+
+        expect(err).instanceOf(IncorrectTxError);
+        expect(mocks.getCheckpointStatus).toHaveBeenCalledTimes(2 * mocks.RPC_COUNT);
+      });
+
+      it('uses a later endpoint that knows a transaction the first one does not', async () => {
+        mocks.getCheckpointStatus
+          .mockRejectedValueOnce(txNotFound())
+          .mockResolvedValue({ checkpointed: true });
+        mocks.buildExitPayloadOnIndex.mockResolvedValue('0xpayload');
+        mocks.buildExitPayloads.mockResolvedValue(['0xpayload']);
+
+        const res = await run(TX);
+
+        expect(res).property('message', 'Payload generation success');
+        expect(res).property('result').not.equal(undefined);
+        expect(mocks.getCheckpointStatus).toHaveBeenCalledTimes(2);
+      });
+    });
+  }
 });

@@ -91,6 +91,11 @@ function buildEnv() {
     emptyStringAsUndefined: true
   });
 
+  // A transaction-not-found answer is only as trustworthy as the number of distinct
+  // providers behind these lists: not-found is retried once per entry, not twice, so
+  // each entry is one vote. Keep the lists long enough, and independent enough, that
+  // "every provider says not found" means something.
+  //
   // The retry logic indexes each coupled pair by the same index (index n = same provider
   // on both sides). Mismatched lengths mean some retries will silently skip due to
   // undefined entries, so exhausting retries without ever trying all providers.
